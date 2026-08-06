@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { Menu, Search, Bell, Moon, Sun, User } from 'lucide-react';
-import { useSidebar } from '../../hooks/useSidebar';
+import { useSidebar } from '../../hooks/useSidebarContext';
 
 const pageTitles = {
   '/': 'Dashboard Overview',

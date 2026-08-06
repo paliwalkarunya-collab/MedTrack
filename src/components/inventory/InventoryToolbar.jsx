@@ -8,6 +8,7 @@ export const InventoryToolbar = ({
     onCategoryChange,
     statusFilter,
     onStatusChange,
+    onAddMedicine,
 }) => {
     return (
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
@@ -51,7 +52,11 @@ export const InventoryToolbar = ({
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
             </div>
 
-            <button className="shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm shadow-blue-500/20 transition-colors">
+            <button
+                type="button"
+                onClick={onAddMedicine}
+                className="shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm shadow-blue-500/20 transition-colors"
+            >
                 <Plus className="w-4 h-4" />
                 Add Medicine
             </button>

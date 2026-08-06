@@ -1,7 +1,7 @@
-import { categories, medicines } from '../../utils/inventoryData';
+import { categories } from '../../utils/inventoryData';
 import { CategoryCard } from './CategoryCard';
 
-export const CategoryGrid = ({ onSelectCategory }) => {
+export const CategoryGrid = ({ medicines, onSelectCategory }) => {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/70 dark:border-slate-800/70 shadow-xs">
             <div className="mb-5">

@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   Clock,
 } from 'lucide-react';
-import { useSidebar } from '../../hooks/useSidebar';
+import { useSidebar } from '../../hooks/useSidebarContext';
 
 const inventorySubItems = [
   { name: 'All Medicines', path: '/inventory', icon: ListFilter },
@@ -50,9 +50,10 @@ export const Sidebar = () => {
 
   useEffect(() => {
     if (isInventoryActive) {
-      setIsInventoryOpen(true);
+      const openInventoryMenu = window.setTimeout(() => setIsInventoryOpen(true), 0);
+      return () => window.clearTimeout(openInventoryMenu);
     }
-  }, [location.pathname]);
+  }, [isInventoryActive]);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900/95 border-r border-slate-200/70 dark:border-slate-800/70 transition-all duration-300 relative select-none shadow-xs">

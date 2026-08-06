@@ -1,14 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-
-const SidebarContext = createContext({
-  isCollapsed: false,
-  toggleCollapse: () => {},
-  isMobileOpen: false,
-  toggleMobileMenu: () => {},
-  closeMobileMenu: () => {},
-  isDarkMode: false,
-  toggleDarkMode: () => {},
-});
+import { useState, useEffect } from 'react';
+import { SidebarContext } from './sidebarContext';
 
 export const SidebarProvider = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -48,5 +39,3 @@ export const SidebarProvider = ({ children }) => {
     </SidebarContext.Provider>
   );
 };
-
-export const useSidebar = () => useContext(SidebarContext);

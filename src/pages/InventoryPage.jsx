@@ -6,6 +6,7 @@ import { InventoryStatsBar } from '../components/inventory/InventoryStatsBar';
 import { InventoryToolbar } from '../components/inventory/InventoryToolbar';
 import { MedicineTable } from '../components/inventory/MedicineTable';
 import { CategoryGrid } from '../components/inventory/CategoryGrid';
+import { AddMedicineModal } from '../components/inventory/AddMedicineModal';
 
 const PAGE_SIZE = 8;
 
@@ -18,15 +19,21 @@ export const InventoryPage = () => {
   const [statusFilter, setStatusFilter] = useState(searchParams.get('filter') || 'all');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
+  const [inventory, setInventory] = useState(() => medicines);
+  const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
 
   useEffect(() => {
-    setStatusFilter(searchParams.get('filter') || 'all');
-    setCurrentPage(1);
+    const syncFilters = window.setTimeout(() => {
+      setStatusFilter(searchParams.get('filter') || 'all');
+      setCurrentPage(1);
+    }, 0);
+
+    return () => window.clearTimeout(syncFilters);
   }, [searchParams]);
 
   const withStatus = useMemo(
-    () => medicines.map((medicine) => ({ ...medicine, status: getMedicineStatus(medicine) })),
-    []
+    () => inventory.map((medicine) => ({ ...medicine, status: getMedicineStatus(medicine) })),
+    [inventory]
   );
 
   const filteredMedicines = useMemo(() => {
@@ -72,6 +79,12 @@ export const InventoryPage = () => {
     setSearchParams({});
   };
 
+  const handleAddMedicine = (medicine) => {
+    setInventory((currentInventory) => [...currentInventory, medicine]);
+    setCurrentPage(1);
+    setIsAddMedicineOpen(false);
+  };
+
   const stats = {
     total: withStatus.length,
     lowStock: withStatus.filter((m) => m.status === 'low-stock').length,
@@ -114,7 +127,7 @@ export const InventoryPage = () => {
       </div>
 
       {activeTab === 'categories' ? (
-        <CategoryGrid onSelectCategory={handleSelectCategory} />
+        <CategoryGrid medicines={inventory} onSelectCategory={handleSelectCategory} />
       ) : (
         <div className="space-y-4">
           <InventoryToolbar
@@ -133,6 +146,7 @@ export const InventoryPage = () => {
               setStatusFilter(value);
               setCurrentPage(1);
             }}
+            onAddMedicine={() => setIsAddMedicineOpen(true)}
           />
 
           <MedicineTable
@@ -146,6 +160,13 @@ export const InventoryPage = () => {
           />
         </div>
       )}
+
+      <AddMedicineModal
+        isOpen={isAddMedicineOpen}
+        onClose={() => setIsAddMedicineOpen(false)}
+        onSave={handleAddMedicine}
+        existingMedicines={inventory}
+      />
     </div>
   );
 };
