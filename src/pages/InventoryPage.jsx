@@ -7,6 +7,7 @@ import { InventoryToolbar } from '../components/inventory/InventoryToolbar';
 import { MedicineTable } from '../components/inventory/MedicineTable';
 import { CategoryGrid } from '../components/inventory/CategoryGrid';
 import { AddMedicineModal } from '../components/inventory/AddMedicineModal';
+import { MedicineDetailsModal } from '../components/inventory/MedicineDetailsModal';
 
 const PAGE_SIZE = 8;
 
@@ -21,6 +22,8 @@ export const InventoryPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [inventory, setInventory] = useState(() => medicines);
   const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
+  const [editingMedicine, setEditingMedicine] = useState(null);
+  const [viewingMedicine, setViewingMedicine] = useState(null);
 
   useEffect(() => {
     const syncFilters = window.setTimeout(() => {
@@ -83,6 +86,11 @@ export const InventoryPage = () => {
     setInventory((currentInventory) => [...currentInventory, medicine]);
     setCurrentPage(1);
     setIsAddMedicineOpen(false);
+  };
+
+  const handleUpdateMedicine = (medicine) => {
+    setInventory((currentInventory) => currentInventory.map((item) => item.id === medicine.id ? medicine : item));
+    setEditingMedicine(null);
   };
 
   const stats = {
@@ -157,16 +165,28 @@ export const InventoryPage = () => {
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
             totalItems={sortedMedicines.length}
+            onView={setViewingMedicine}
+            onEdit={setEditingMedicine}
           />
         </div>
       )}
 
       <AddMedicineModal
+        key={editingMedicine?.id || 'add-medicine'}
         isOpen={isAddMedicineOpen}
         onClose={() => setIsAddMedicineOpen(false)}
         onSave={handleAddMedicine}
         existingMedicines={inventory}
       />
+      <AddMedicineModal
+        key={editingMedicine?.id || 'edit-medicine'}
+        isOpen={editingMedicine !== null}
+        onClose={() => setEditingMedicine(null)}
+        onSave={handleUpdateMedicine}
+        existingMedicines={inventory}
+        medicine={editingMedicine}
+      />
+      <MedicineDetailsModal medicine={viewingMedicine} onClose={() => setViewingMedicine(null)} />
     </div>
   );
 };

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { X, PackagePlus } from 'lucide-react';
 import { categories } from '../../utils/inventoryData';
 import { INVENTORY_UNITS, PACKAGING_TYPES } from '../../constants/medicineOptions';
+import { formatPackagingPreview } from '../../utils/medicineCalculations';
 
 const initialForm = {
   name: '', genericName: '', brandName: '', manufacturer: '', category: '', supplier: '',
@@ -11,19 +12,32 @@ const initialForm = {
   allowSellingByUnit: true, description: '',
 };
 
-const pluralize = (value, count) => (count === 1 ? value : `${value}s`);
-
 const inputClassName = 'w-full px-3 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 rounded-xl border border-slate-200/70 dark:border-slate-700/70 focus:border-blue-500/80 focus:outline-none focus:ring-4 focus:ring-blue-500/10';
 const labelClassName = 'block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5';
 
-export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines }) => {
-  const [form, setForm] = useState(initialForm);
-  const [errors, setErrors] = useState({});
+const medicineToForm = (medicine) => medicine ? {
+  name: medicine.name, genericName: medicine.genericName, brandName: medicine.brandName,
+  manufacturer: medicine.manufacturer, category: medicine.category, supplier: medicine.supplier,
+  batchNumber: medicine.batchNumber, manufacturingDate: medicine.manufacturingDate,
+  expiryDate: medicine.expiryDate, rackLocation: medicine.rackLocation, barcode: medicine.barcode,
+  packType: medicine.packaging.packType, inventoryUnit: medicine.packaging.inventoryUnit,
+  unitsPerPack: String(medicine.packaging.unitsPerPack), currentPacks: String(medicine.stock.currentPacks),
+  looseUnits: String(medicine.stock.looseUnits), reorderLevel: String(medicine.stock.reorderLevel),
+  purchasePricePerPack: String(medicine.pricing.purchasePricePerPack), sellingPricePerPack: String(medicine.pricing.sellingPricePerPack),
+  allowSellingByPack: medicine.sellingOptions.allowSellingByPack, allowSellingByUnit: medicine.sellingOptions.allowSellingByUnit,
+  description: medicine.description,
+} : initialForm;
 
-  const packagingPreview = useMemo(() => {
-    const units = Number(form.unitsPerPack) || 0;
-    return `1 ${form.packType} = ${units} ${pluralize(form.inventoryUnit, units)}`;
-  }, [form.inventoryUnit, form.packType, form.unitsPerPack]);
+export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, medicine = null }) => {
+  const [form, setForm] = useState(() => medicineToForm(medicine));
+  const [errors, setErrors] = useState({});
+  const isEditing = medicine !== null;
+
+  const packagingPreview = formatPackagingPreview({
+    packType: form.packType,
+    inventoryUnit: form.inventoryUnit,
+    unitsPerPack: Number(form.unitsPerPack) || 0,
+  });
 
   if (!isOpen) return null;
 
@@ -58,20 +72,20 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines })
       return;
     }
 
-    const nextNumber = Math.max(1000, ...existingMedicines.map((medicine) => Number(medicine.id.replace('MED-', '')) || 0)) + 1;
+    const nextNumber = Math.max(1000, ...existingMedicines.map((item) => Number(item.id.replace('MED-', '')) || 0)) + 1;
     onSave({
-      id: `MED-${nextNumber}`,
+      ...(medicine || { id: `MED-${nextNumber}`, image: null }),
       name: form.name.trim(), genericName: form.genericName.trim(), brandName: form.brandName.trim(),
       manufacturer: form.manufacturer.trim(), category: form.category, supplier: form.supplier.trim(),
       batchNumber: form.batchNumber.trim(), manufacturingDate: form.manufacturingDate, expiryDate: form.expiryDate,
-      rackLocation: form.rackLocation.trim(), barcode: form.barcode.trim(), image: null,
+      rackLocation: form.rackLocation.trim(), barcode: form.barcode.trim(),
       packaging: { packType: form.packType, inventoryUnit: form.inventoryUnit, unitsPerPack: Number(form.unitsPerPack) },
       stock: { currentPacks: Number(form.currentPacks), looseUnits: Number(form.looseUnits), reorderLevel: Number(form.reorderLevel) },
       pricing: { purchasePricePerPack: Number(form.purchasePricePerPack), sellingPricePerPack: Number(form.sellingPricePerPack) },
       sellingOptions: { allowSellingByPack: form.allowSellingByPack, allowSellingByUnit: form.allowSellingByUnit },
       description: form.description.trim(),
     });
-    setForm(initialForm);
+    setForm(medicineToForm(medicine));
     setErrors({});
   };
 
@@ -90,7 +104,7 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines })
         <div className="sticky top-0 z-10 flex items-center justify-between p-5 bg-white dark:bg-slate-900 border-b border-slate-200/70 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center"><PackagePlus className="w-5 h-5" /></div>
-            <div><h3 id="add-medicine-title" className="text-base font-bold text-slate-900 dark:text-white">Add Medicine</h3><p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Register a new medicine and its stock details.</p></div>
+            <div><h3 id="add-medicine-title" className="text-base font-bold text-slate-900 dark:text-white">{isEditing ? 'Edit Medicine' : 'Add Medicine'}</h3><p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{isEditing ? 'Update medicine and stock details.' : 'Register a new medicine and its stock details.'}</p></div>
           </div>
           <button type="button" onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button>
         </div>
@@ -115,7 +129,7 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines })
 
           <section className="pt-5 border-t border-slate-100 dark:border-slate-800"><label><span className={labelClassName}>Description</span><textarea name="description" value={form.description} onChange={updateField} rows="3" className={inputClassName} /></label></section>
         </div>
-        <div className="sticky bottom-0 flex justify-end gap-3 p-5 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800"><button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Cancel</button><button type="submit" className="px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm shadow-blue-500/20">Save Medicine</button></div>
+        <div className="sticky bottom-0 flex justify-end gap-3 p-5 bg-white dark:bg-slate-900 border-t border-slate-200/70 dark:border-slate-800"><button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Cancel</button><button type="submit" className="px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm shadow-blue-500/20">{isEditing ? 'Update Medicine' : 'Save Medicine'}</button></div>
       </form>
     </div>
   );

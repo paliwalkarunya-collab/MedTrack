@@ -17,7 +17,7 @@ const formatDate = (dateString) =>
 
 const categoryName = (categoryId) => categories.find((category) => category.id === categoryId)?.name || categoryId;
 
-export const MedicineTable = ({ medicines, sortConfig, onSort, currentPage, pageSize, onPageChange, totalItems }) => {
+export const MedicineTable = ({ medicines, sortConfig, onSort, currentPage, pageSize, onPageChange, totalItems, onView, onEdit }) => {
     if (medicines.length === 0) {
         return (
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 border border-slate-200/70 dark:border-slate-800/70 shadow-xs flex flex-col items-center justify-center text-center">
@@ -74,10 +74,10 @@ export const MedicineTable = ({ medicines, sortConfig, onSort, currentPage, page
                                     </td>
                                     <td className="py-3">
                                         <div className="flex items-center justify-end gap-1">
-                                            <button title="View" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors">
+                                            <button type="button" title="View" onClick={() => onView(medicine)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors">
                                                 <Eye className="w-4 h-4" />
                                             </button>
-                                            <button title="Edit" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                            <button type="button" title="Edit" onClick={() => onEdit(medicine)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                                                 <Pencil className="w-4 h-4" />
                                             </button>
                                             <button title="Delete" className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors">

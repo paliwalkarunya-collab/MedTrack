@@ -33,6 +33,11 @@ export const calculatePotentialRevenue = (medicine) => {
 
 const pluralize = (label, count) => (count === 1 ? label : `${label}s`);
 
+export const formatPackagingPreview = ({ packType, inventoryUnit, unitsPerPack }) => {
+    const unitLabel = inventoryUnit === 'mL' ? inventoryUnit : pluralize(inventoryUnit, unitsPerPack);
+    return `1 ${packType} = ${unitsPerPack} ${unitLabel}`;
+};
+
 // "24 Strips + 8 Tablets" instead of a raw unit count.
 export const formatStockDisplay = (medicine) => {
     const { currentPacks, looseUnits } = medicine.stock;
