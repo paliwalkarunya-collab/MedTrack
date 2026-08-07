@@ -4,5 +4,6 @@ export const InventoryContext = createContext({
   inventory: [],
   addMedicine: () => {},
   updateMedicine: () => {},
+  receivePurchase: () => {},
   deductStockForBill: () => {},
 });

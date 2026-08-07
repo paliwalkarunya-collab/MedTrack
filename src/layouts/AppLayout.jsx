@@ -3,9 +3,13 @@ import { SidebarProvider } from '../hooks/useSidebar';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
 import { InventoryProvider } from '../hooks/InventoryProvider';
+import { SupplierProvider } from '../hooks/SupplierProvider';
+import { PurchaseProvider } from '../hooks/PurchaseProvider';
 
 export const AppLayout = () => {
   return (
+    <SupplierProvider>
+    <PurchaseProvider>
     <InventoryProvider>
     <SidebarProvider>
       <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased selection:bg-blue-500 selection:text-white">
@@ -27,5 +31,7 @@ export const AppLayout = () => {
       </div>
     </SidebarProvider>
     </InventoryProvider>
+    </PurchaseProvider>
+    </SupplierProvider>
   );
 };

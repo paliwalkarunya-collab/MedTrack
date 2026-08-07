@@ -5,11 +5,13 @@ import { MEDICINE_DOSAGE_FORMS, PRODUCT_TYPES, UNIT_TYPES, PACKAGING_TYPES } fro
 import { formatPackagingPreview } from '../../utils/medicineCalculations';
 import { getDosageForm, getPackaging, getProductType } from '../../utils/productModel';
 import { BarcodeScannerField } from '../common/BarcodeScannerField';
+import { SupplierSelector } from '../common/SupplierSelector';
+import { useSuppliers } from '../../hooks/useSuppliers';
 
 const initialForm = {
-  productType: 'Medicine', dosageForm: '', name: '', genericName: '', brandName: '', manufacturer: '', category: '', supplier: '',
+  productType: 'Medicine', dosageForm: '', name: '', genericName: '', brandName: '', manufacturer: '', category: '', supplier: '', preferredSupplierId: '',
   batchNumber: '', manufacturingDate: '', expiryDate: '', rackLocation: '', barcode: '',
-  packType: 'Strip', inventoryUnit: 'Tablet', unitsPerPack: '', currentPacks: '', looseUnits: '',
+  packType: 'Strip', unitType: 'Tablet', unitsPerPack: '', currentPacks: '', looseUnits: '',
   reorderLevel: '', purchasePricePerPack: '', sellingPricePerPack: '', allowSellingByPack: true,
   allowSellingByUnit: true, description: '',
 };
@@ -19,7 +21,7 @@ const labelClassName = 'block text-xs font-semibold text-slate-700 dark:text-sla
 
 const medicineToForm = (medicine) => medicine ? {
   productType: getProductType(medicine), dosageForm: getDosageForm(medicine), name: medicine.name, genericName: medicine.genericName, brandName: medicine.brandName,
-  manufacturer: medicine.manufacturer, category: medicine.category, supplier: medicine.supplier,
+  manufacturer: medicine.manufacturer, category: medicine.category, supplier: medicine.supplier, preferredSupplierId: medicine.preferredSupplierId || '',
   batchNumber: medicine.batchNumber, manufacturingDate: medicine.manufacturingDate,
   expiryDate: medicine.expiryDate, rackLocation: medicine.rackLocation, barcode: medicine.barcode,
   packType: getPackaging(medicine).packType, unitType: getPackaging(medicine).unitType,
@@ -31,6 +33,7 @@ const medicineToForm = (medicine) => medicine ? {
 } : initialForm;
 
 export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, medicine = null }) => {
+  const { suppliers } = useSuppliers();
   const [form, setForm] = useState(() => medicineToForm(medicine));
   const [errors, setErrors] = useState({});
   const isEditing = medicine !== null;
@@ -56,7 +59,7 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
 
   const validate = () => {
     const nextErrors = {};
-    const requiredFields = ['productType', 'name', 'genericName', 'manufacturer', 'category', 'supplier', 'batchNumber', 'manufacturingDate', 'expiryDate', 'rackLocation', 'packType', 'unitsPerPack', 'currentPacks', 'reorderLevel', 'purchasePricePerPack', 'sellingPricePerPack'];
+    const requiredFields = ['productType', 'name', 'genericName', 'manufacturer', 'category', 'batchNumber', 'manufacturingDate', 'expiryDate', 'rackLocation', 'packType', 'unitsPerPack', 'currentPacks', 'reorderLevel', 'purchasePricePerPack', 'sellingPricePerPack'];
     requiredFields.forEach((field) => {
       if (String(form[field]).trim() === '') nextErrors[field] = 'This field is required.';
     });
@@ -85,6 +88,7 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
       ...(medicine || { id: `MED-${nextNumber}`, image: null }),
       productType: form.productType,
       dosageForm: form.productType === 'Medicine' ? form.dosageForm : '',
+      preferredSupplierId: form.preferredSupplierId,
       name: form.name.trim(), genericName: form.genericName.trim(), brandName: form.brandName.trim(),
       manufacturer: form.manufacturer.trim(), category: form.category, supplier: form.supplier.trim(),
       batchNumber: form.batchNumber.trim(), manufacturingDate: form.manufacturingDate, expiryDate: form.expiryDate,
@@ -125,7 +129,7 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
             {form.productType === 'Medicine' && <label><span className={labelClassName}>Dosage Form</span><select name="dosageForm" value={form.dosageForm} onChange={updateField} className={inputClassName}><option value="">Select dosage form</option>{MEDICINE_DOSAGE_FORMS.map((formOption) => <option key={formOption} value={formOption}>{formOption}</option>)}</select></label>}
             {field('name', 'Product Name')} {field('genericName', 'Generic Name')} {field('brandName', 'Brand Name')} {field('manufacturer', 'Manufacturer')}
             <label><span className={labelClassName}>Category</span><select name="category" value={form.category} onChange={updateField} className={inputClassName}><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{errors.category && <span className="mt-1 block text-xs text-rose-600 dark:text-rose-400">{errors.category}</span>}</label>
-            {field('supplier', 'Supplier')} {field('batchNumber', 'Batch Number')} <BarcodeScannerField value={form.barcode} onChange={updateBarcode} />
+            <SupplierSelector suppliers={suppliers} value={form.preferredSupplierId} onChange={(preferredSupplierId) => setForm((currentForm) => ({ ...currentForm, preferredSupplierId }))} label="Preferred Supplier" /> {field('batchNumber', 'Batch Number')} <BarcodeScannerField value={form.barcode} onChange={updateBarcode} />
             {field('manufacturingDate', 'Manufacturing Date', 'date')} {field('expiryDate', 'Expiry Date', 'date')} {field('rackLocation', 'Rack Location')}
           </div></section>
 
