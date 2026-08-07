@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { X, PackagePlus } from 'lucide-react';
 import { categories } from '../../utils/inventoryData';
-import { INVENTORY_UNITS, PACKAGING_TYPES } from '../../constants/medicineOptions';
+import { MEDICINE_DOSAGE_FORMS, PRODUCT_TYPES, UNIT_TYPES, PACKAGING_TYPES } from '../../constants/medicineOptions';
 import { formatPackagingPreview } from '../../utils/medicineCalculations';
+import { getDosageForm, getPackaging, getProductType } from '../../utils/productModel';
+import { BarcodeScannerField } from '../common/BarcodeScannerField';
 
 const initialForm = {
-  name: '', genericName: '', brandName: '', manufacturer: '', category: '', supplier: '',
+  productType: 'Medicine', dosageForm: '', name: '', genericName: '', brandName: '', manufacturer: '', category: '', supplier: '',
   batchNumber: '', manufacturingDate: '', expiryDate: '', rackLocation: '', barcode: '',
   packType: 'Strip', inventoryUnit: 'Tablet', unitsPerPack: '', currentPacks: '', looseUnits: '',
   reorderLevel: '', purchasePricePerPack: '', sellingPricePerPack: '', allowSellingByPack: true,
@@ -16,12 +18,12 @@ const inputClassName = 'w-full px-3 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-
 const labelClassName = 'block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5';
 
 const medicineToForm = (medicine) => medicine ? {
-  name: medicine.name, genericName: medicine.genericName, brandName: medicine.brandName,
+  productType: getProductType(medicine), dosageForm: getDosageForm(medicine), name: medicine.name, genericName: medicine.genericName, brandName: medicine.brandName,
   manufacturer: medicine.manufacturer, category: medicine.category, supplier: medicine.supplier,
   batchNumber: medicine.batchNumber, manufacturingDate: medicine.manufacturingDate,
   expiryDate: medicine.expiryDate, rackLocation: medicine.rackLocation, barcode: medicine.barcode,
-  packType: medicine.packaging.packType, inventoryUnit: medicine.packaging.inventoryUnit,
-  unitsPerPack: String(medicine.packaging.unitsPerPack), currentPacks: String(medicine.stock.currentPacks),
+  packType: getPackaging(medicine).packType, unitType: getPackaging(medicine).unitType,
+  unitsPerPack: String(getPackaging(medicine).unitsPerPack), currentPacks: String(medicine.stock.currentPacks),
   looseUnits: String(medicine.stock.looseUnits), reorderLevel: String(medicine.stock.reorderLevel),
   purchasePricePerPack: String(medicine.pricing.purchasePricePerPack), sellingPricePerPack: String(medicine.pricing.sellingPricePerPack),
   allowSellingByPack: medicine.sellingOptions.allowSellingByPack, allowSellingByUnit: medicine.sellingOptions.allowSellingByUnit,
@@ -35,7 +37,7 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
 
   const packagingPreview = formatPackagingPreview({
     packType: form.packType,
-    inventoryUnit: form.inventoryUnit,
+    unitType: form.unitType,
     unitsPerPack: Number(form.unitsPerPack) || 0,
   });
 
@@ -43,13 +45,18 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
 
   const updateField = (event) => {
     const { name, value, type, checked } = event.target;
-    setForm((currentForm) => ({ ...currentForm, [name]: type === 'checkbox' ? checked : value }));
+    setForm((currentForm) => ({ ...currentForm, [name]: type === 'checkbox' ? checked : value, ...(name === 'productType' && value !== 'Medicine' ? { dosageForm: '' } : {}) }));
     setErrors((currentErrors) => ({ ...currentErrors, [name]: undefined }));
+  };
+
+  const updateBarcode = (barcode) => {
+    setForm((currentForm) => ({ ...currentForm, barcode }));
+    setErrors((currentErrors) => ({ ...currentErrors, barcode: undefined }));
   };
 
   const validate = () => {
     const nextErrors = {};
-    const requiredFields = ['name', 'genericName', 'manufacturer', 'category', 'supplier', 'batchNumber', 'manufacturingDate', 'expiryDate', 'rackLocation', 'packType', 'inventoryUnit', 'unitsPerPack', 'currentPacks', 'looseUnits', 'reorderLevel', 'purchasePricePerPack', 'sellingPricePerPack'];
+    const requiredFields = ['productType', 'name', 'genericName', 'manufacturer', 'category', 'supplier', 'batchNumber', 'manufacturingDate', 'expiryDate', 'rackLocation', 'packType', 'unitsPerPack', 'currentPacks', 'reorderLevel', 'purchasePricePerPack', 'sellingPricePerPack'];
     requiredFields.forEach((field) => {
       if (String(form[field]).trim() === '') nextErrors[field] = 'This field is required.';
     });
@@ -57,7 +64,8 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
     const unitsPerPack = Number(form.unitsPerPack);
     const looseUnits = Number(form.looseUnits);
     if (form.unitsPerPack !== '' && unitsPerPack <= 0) nextErrors.unitsPerPack = 'Must be greater than 0.';
-    if (form.looseUnits !== '' && looseUnits > unitsPerPack) nextErrors.looseUnits = 'Cannot exceed units per pack.';
+    if (form.allowSellingByUnit && form.looseUnits === '') nextErrors.looseUnits = 'This field is required.';
+    if (form.allowSellingByUnit && form.looseUnits !== '' && looseUnits > unitsPerPack) nextErrors.looseUnits = 'Cannot exceed units per pack.';
     if (form.purchasePricePerPack !== '' && Number(form.purchasePricePerPack) <= 0) nextErrors.purchasePricePerPack = 'Must be greater than 0.';
     if (form.sellingPricePerPack !== '' && Number(form.sellingPricePerPack) <= 0) nextErrors.sellingPricePerPack = 'Must be greater than 0.';
     if (form.manufacturingDate && form.expiryDate && form.expiryDate <= form.manufacturingDate) nextErrors.expiryDate = 'Must be after the manufacturing date.';
@@ -75,12 +83,14 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
     const nextNumber = Math.max(1000, ...existingMedicines.map((item) => Number(item.id.replace('MED-', '')) || 0)) + 1;
     onSave({
       ...(medicine || { id: `MED-${nextNumber}`, image: null }),
+      productType: form.productType,
+      dosageForm: form.productType === 'Medicine' ? form.dosageForm : '',
       name: form.name.trim(), genericName: form.genericName.trim(), brandName: form.brandName.trim(),
       manufacturer: form.manufacturer.trim(), category: form.category, supplier: form.supplier.trim(),
       batchNumber: form.batchNumber.trim(), manufacturingDate: form.manufacturingDate, expiryDate: form.expiryDate,
       rackLocation: form.rackLocation.trim(), barcode: form.barcode.trim(),
-      packaging: { packType: form.packType, inventoryUnit: form.inventoryUnit, unitsPerPack: Number(form.unitsPerPack) },
-      stock: { currentPacks: Number(form.currentPacks), looseUnits: Number(form.looseUnits), reorderLevel: Number(form.reorderLevel) },
+      packaging: { packType: form.packType, unitType: form.unitType, unitsPerPack: Number(form.unitsPerPack) },
+      stock: { currentPacks: Number(form.currentPacks), looseUnits: form.allowSellingByUnit ? Number(form.looseUnits) : 0, reorderLevel: Number(form.reorderLevel) },
       pricing: { purchasePricePerPack: Number(form.purchasePricePerPack), sellingPricePerPack: Number(form.sellingPricePerPack) },
       sellingOptions: { allowSellingByPack: form.allowSellingByPack, allowSellingByUnit: form.allowSellingByUnit },
       description: form.description.trim(),
@@ -111,21 +121,23 @@ export const AddMedicineModal = ({ isOpen, onClose, onSave, existingMedicines, m
 
         <div className="p-5 sm:p-6 space-y-6">
           <section><h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Medicine details</h4><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {field('name', 'Medicine Name')} {field('genericName', 'Generic Name')} {field('brandName', 'Brand Name')} {field('manufacturer', 'Manufacturer')}
+            <label><span className={labelClassName}>Product Type</span><select name="productType" value={form.productType} onChange={updateField} className={inputClassName}>{PRODUCT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+            {form.productType === 'Medicine' && <label><span className={labelClassName}>Dosage Form</span><select name="dosageForm" value={form.dosageForm} onChange={updateField} className={inputClassName}><option value="">Select dosage form</option>{MEDICINE_DOSAGE_FORMS.map((formOption) => <option key={formOption} value={formOption}>{formOption}</option>)}</select></label>}
+            {field('name', 'Product Name')} {field('genericName', 'Generic Name')} {field('brandName', 'Brand Name')} {field('manufacturer', 'Manufacturer')}
             <label><span className={labelClassName}>Category</span><select name="category" value={form.category} onChange={updateField} className={inputClassName}><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{errors.category && <span className="mt-1 block text-xs text-rose-600 dark:text-rose-400">{errors.category}</span>}</label>
-            {field('supplier', 'Supplier')} {field('batchNumber', 'Batch Number')} {field('barcode', 'Barcode')}
+            {field('supplier', 'Supplier')} {field('batchNumber', 'Batch Number')} <BarcodeScannerField value={form.barcode} onChange={updateBarcode} />
             {field('manufacturingDate', 'Manufacturing Date', 'date')} {field('expiryDate', 'Expiry Date', 'date')} {field('rackLocation', 'Rack Location')}
           </div></section>
 
           <section className="pt-5 border-t border-slate-100 dark:border-slate-800"><h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Packaging and stock</h4><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <label><span className={labelClassName}>Packaging Type</span><select name="packType" value={form.packType} onChange={updateField} className={inputClassName}>{PACKAGING_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-            <label><span className={labelClassName}>Inventory Unit</span><select name="inventoryUnit" value={form.inventoryUnit} onChange={updateField} className={inputClassName}>{INVENTORY_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
-            {field('unitsPerPack', 'Units Per Pack', 'number', { min: '1', step: '1' })} {field('currentPacks', 'Current Packs', 'number', { min: '0', step: '1' })} {field('looseUnits', 'Loose Units', 'number', { min: '0', step: '1' })} {field('reorderLevel', 'Reorder Level', 'number', { min: '0', step: '1' })}
+            <label><span className={labelClassName}>Unit Type <span className="font-normal text-slate-400">(Optional)</span></span><select name="unitType" value={form.unitType} onChange={updateField} className={inputClassName}>{UNIT_TYPES.map((unit) => <option key={unit || 'none'} value={unit}>{unit || 'Not applicable'}</option>)}</select></label>
+            {field('unitsPerPack', 'Units Per Pack', 'number', { min: '1', step: '1' })} {field('currentPacks', 'Pack Quantity', 'number', { min: '0', step: '1' })} {form.allowSellingByUnit && field('looseUnits', 'Loose Unit Quantity', 'number', { min: '0', step: '1' })} {field('reorderLevel', 'Reorder Level (Packs)', 'number', { min: '0', step: '1' })}
           </div><div className="mt-4 px-4 py-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 text-sm font-semibold text-blue-700 dark:text-blue-300">Packaging preview: {packagingPreview}</div></section>
 
           <section className="pt-5 border-t border-slate-100 dark:border-slate-800"><h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Pricing and selling options</h4><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {field('purchasePricePerPack', 'Purchase Price Per Pack', 'number', { min: '0.01', step: '0.01' })} {field('sellingPricePerPack', 'Selling Price Per Pack', 'number', { min: '0.01', step: '0.01' })}
-          </div><div className="mt-4 flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input name="allowSellingByPack" type="checkbox" checked={form.allowSellingByPack} onChange={updateField} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />Allow Selling By Pack</label><label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input name="allowSellingByUnit" type="checkbox" checked={form.allowSellingByUnit} onChange={updateField} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />Allow Selling By Unit</label></div></section>
+          </div><div className="mt-4 flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input name="allowSellingByPack" type="checkbox" checked={form.allowSellingByPack} onChange={updateField} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />Sell Complete Pack</label><label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input name="allowSellingByUnit" type="checkbox" checked={form.allowSellingByUnit} onChange={updateField} disabled={!form.unitType || Number(form.unitsPerPack) <= 1} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50" />Sell Individual Units</label></div></section>
 
           <section className="pt-5 border-t border-slate-100 dark:border-slate-800"><label><span className={labelClassName}>Description</span><textarea name="description" value={form.description} onChange={updateField} rows="3" className={inputClassName} /></label></section>
         </div>

@@ -2,9 +2,11 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider } from '../hooks/useSidebar';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
+import { InventoryProvider } from '../hooks/InventoryProvider';
 
 export const AppLayout = () => {
   return (
+    <InventoryProvider>
     <SidebarProvider>
       <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased selection:bg-blue-500 selection:text-white">
         {/* Responsive Collapsible Sidebar */}
@@ -24,5 +26,6 @@ export const AppLayout = () => {
         </div>
       </div>
     </SidebarProvider>
+    </InventoryProvider>
   );
 };

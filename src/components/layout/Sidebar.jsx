@@ -3,9 +3,9 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
-  Truck,
+  ReceiptText,
   ShoppingCart,
-  Heart,
+  Building2,
   BarChart3,
   FileText,
   Bell,
@@ -32,9 +32,9 @@ const inventorySubItems = [
 const mainNavItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Inventory', path: '/inventory', icon: Package, hasSubmenu: true },
-  { name: 'Distribution', path: '/distribution', icon: Truck },
+  { name: 'Billing', path: '/billing', icon: ReceiptText },
   { name: 'Purchases', path: '/purchases', icon: ShoppingCart },
-  { name: 'Donations', path: '/donations', icon: Heart },
+  { name: 'Suppliers', path: '/suppliers', icon: Building2 },
   { name: 'Analytics', path: '/analytics', icon: BarChart3 },
   { name: 'Reports', path: '/reports', icon: FileText },
   { name: 'Alerts', path: '/alerts', icon: Bell },

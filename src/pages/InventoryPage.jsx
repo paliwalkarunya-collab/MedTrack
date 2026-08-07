@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ListFilter, Grid } from 'lucide-react';
-import { medicines, getMedicineStatus } from '../utils/inventoryData';
+import { getMedicineStatus } from '../utils/inventoryData';
+import { useInventory } from '../hooks/useInventory';
 import { InventoryStatsBar } from '../components/inventory/InventoryStatsBar';
 import { InventoryToolbar } from '../components/inventory/InventoryToolbar';
 import { MedicineTable } from '../components/inventory/MedicineTable';
@@ -20,7 +21,7 @@ export const InventoryPage = () => {
   const [statusFilter, setStatusFilter] = useState(searchParams.get('filter') || 'all');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [inventory, setInventory] = useState(() => medicines);
+  const { inventory, addMedicine, updateMedicine } = useInventory();
   const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState(null);
   const [viewingMedicine, setViewingMedicine] = useState(null);
@@ -83,13 +84,13 @@ export const InventoryPage = () => {
   };
 
   const handleAddMedicine = (medicine) => {
-    setInventory((currentInventory) => [...currentInventory, medicine]);
+    addMedicine(medicine);
     setCurrentPage(1);
     setIsAddMedicineOpen(false);
   };
 
   const handleUpdateMedicine = (medicine) => {
-    setInventory((currentInventory) => currentInventory.map((item) => item.id === medicine.id ? medicine : item));
+    updateMedicine(medicine);
     setEditingMedicine(null);
   };
 

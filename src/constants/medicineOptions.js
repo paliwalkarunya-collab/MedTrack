@@ -2,17 +2,24 @@
 // Consumed by future Inventory forms (Add/Edit Medicine) so every screen
 // that captures or displays Packaging / Inventory Unit stays in sync.
 
-export const PACKAGING_TYPES = ['Strip', 'Box', 'Bottle', 'Tube', 'Carton', 'Vial', 'Sachet', 'Pouch'];
+export const PRODUCT_TYPES = ['Medicine', 'Personal Care', 'Medical Device', 'Surgical Item', 'Supplement'];
+
+export const MEDICINE_DOSAGE_FORMS = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Cream', 'Ointment', 'Drops', 'Powder', 'Inhaler', 'Gel', 'Lotion'];
+
+export const PACKAGING_TYPES = ['Strip', 'Box', 'Bottle', 'Tube', 'Sachet', 'Piece', 'Packet', 'Carton', 'Jar', 'Can', 'Vial', 'Pouch'];
 
 export const INVENTORY_UNITS = [
+    '',
     'Tablet',
     'Capsule',
-    'Bottle',
     'mL',
-    'Gram',
-    'Tube',
+    'g',
+    'Piece',
+    'Glove',
+    'Mask',
     'Pen',
     'Vial',
     'Sachet',
-    'Piece',
 ];
+
+export const UNIT_TYPES = INVENTORY_UNITS;

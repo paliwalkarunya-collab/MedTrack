@@ -5,9 +5,9 @@ import { useSidebar } from '../../hooks/useSidebarContext';
 const pageTitles = {
   '/': 'Dashboard Overview',
   '/inventory': 'Medicine Inventory',
-  '/distribution': 'Distribution Log',
+  '/billing': 'Billing',
   '/purchases': 'Purchase Orders',
-  '/donations': 'Donation Intake',
+  '/suppliers': 'Suppliers',
   '/analytics': 'Analytics & Insights',
   '/reports': 'Reports & Exports',
   '/alerts': 'Alerts & Expirations',
