@@ -9,6 +9,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ExpiryPage } from './pages/ExpiryPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="alerts" element={<AlertsPage />} />
+        <Route path="expiry" element={<ExpiryPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
