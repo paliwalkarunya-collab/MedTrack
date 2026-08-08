@@ -1,3 +1,4 @@
+import InvoicePreviewModal from '../components/billing/InvoicePreviewModal';
 import { useCallback, useMemo, useState } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { calculateRemainingStock, calculateSellingPricePerUnit } from '../utils/medicineCalculations';
@@ -5,6 +6,9 @@ import { CustomerDetailsCard } from '../components/billing/CustomerDetailsCard';
 import { MedicineSearchPanel } from '../components/billing/MedicineSearchPanel';
 import { BillingCart } from '../components/billing/BillingCart';
 import { BillSummary } from '../components/billing/BillSummary';
+import { allocateFifoBatches } from '../utils/fifoBatchUtils';
+import { useBillingHistory } from '../hooks/useBillingHistory';
+import { generateInvoicePdf } from '../utils/invoiceUtils';
 
 const emptyQuantity = { packs: '0', looseUnits: '0' };
 const createBillNumber = (sequence) => `BILL-${new Date().getFullYear()}-${String(sequence).padStart(4, '0')}`;
@@ -14,17 +18,22 @@ const createCartItem = (medicine, selectedQuantity) => {
   const packs = toNonNegativeNumber(selectedQuantity.packs);
   const looseUnits = toNonNegativeNumber(selectedQuantity.looseUnits);
   const pricePerUnit = calculateSellingPricePerUnit(medicine);
+  const requestedUnits = packs * medicine.packaging.unitsPerPack + looseUnits;
+  const batchUsed = allocateFifoBatches(medicine, requestedUnits).allocations;
+
   return {
     medicine,
     packs,
     looseUnits,
     pricePerUnit,
+    batchUsed,
     lineTotal: packs * medicine.pricing.sellingPricePerPack + looseUnits * pricePerUnit,
   };
 };
 
 export const BillingPage = () => {
   const { inventory, deductStockForBill } = useInventory();
+  const { createInvoice } = useBillingHistory();
   const [customer, setCustomer] = useState({ name: '', phone: '', doctor: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMedicineId, setSelectedMedicineId] = useState(null);
@@ -35,6 +44,9 @@ export const BillingPage = () => {
   const [editQuantity, setEditQuantity] = useState(emptyQuantity);
   const [billSequence, setBillSequence] = useState(1);
   const [successMessage, setSuccessMessage] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [currentInvoice, setCurrentInvoice] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const selectedMedicine = useMemo(
     () => inventory.find((medicine) => medicine.id === selectedMedicineId) || null,
@@ -58,7 +70,7 @@ export const BillingPage = () => {
   const totalItems = useMemo(() => cartItems.reduce((total, item) => total + item.packs + item.looseUnits, 0), [cartItems]);
   const cartHasInsufficientStock = useMemo(() => cartItems.some((item) => {
     const medicine = inventory.find((inventoryItem) => inventoryItem.id === item.medicine.id);
-    return !medicine || !calculateRemainingStock(medicine, item.packs, item.looseUnits).isSufficient;
+    return !medicine || !allocateFifoBatches(medicine, item.packs * medicine.packaging.unitsPerPack + item.looseUnits).isSufficient;
   }), [cartItems, inventory]);
 
   const validateQuantity = (medicine, selectedQuantity) => {
@@ -67,7 +79,7 @@ export const BillingPage = () => {
     if (packs < 0 || looseUnits < 0) return 'Quantities cannot be negative.';
     if (!packs && !looseUnits) return 'Enter at least one pack or loose unit.';
     if (!Number.isInteger(packs) || !Number.isInteger(looseUnits)) return 'Quantities must be whole numbers.';
-    if (!calculateRemainingStock(medicine, packs, looseUnits).isSufficient) return 'Insufficient stock. Reduce the requested quantity.';
+    if (!allocateFifoBatches(medicine, packs * medicine.packaging.unitsPerPack + looseUnits).isSufficient) return 'No sellable stock available.';
     return '';
   };
 
@@ -134,21 +146,69 @@ export const BillingPage = () => {
   };
 
   const clearCart = () => { setCartItems([]); setEditingId(null); setSuccessMessage(''); setSelectionError(''); };
-  const generateBill = () => {
+  const generateBill = async () => {
     if (!cartItems.length || cartHasInsufficientStock) return;
-    deductStockForBill(cartItems);
-    setSuccessMessage(`${createBillNumber(billSequence)} generated successfully. Inventory was updated.`);
-    setBillSequence((sequence) => sequence + 1);
-    setCartItems([]);
-    setEditingId(null);
+    const billItems = deductStockForBill(cartItems);
+    const invoice = createInvoice({ billNumber: createBillNumber(billSequence), customer, paymentMethod, discount: 0, gst: 0, subtotal, grandTotal: subtotal, totalItems, items: billItems });
+    setCurrentInvoice(invoice);
+    setShowPreview(true);
+
+    setSuccessMessage(
+      `${invoice.invoiceId} generated successfully. Inventory was updated.`
+    );
   };
 
   return (
     <div className="space-y-6 pb-6">
       <div><h2 className="text-xl font-bold text-slate-900 dark:text-white">Billing</h2><p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Create customer bills and update stock automatically.</p></div>
-      <CustomerDetailsCard billNumber={createBillNumber(billSequence)} customer={customer} onChange={(event) => setCustomer((currentCustomer) => ({ ...currentCustomer, [event.target.name]: event.target.value }))} />
+      <CustomerDetailsCard billNumber={createBillNumber(billSequence)} customer={customer} onChange={(event) => setCustomer((currentCustomer) => ({ ...currentCustomer, [event.target.name]: event.target.value }))} paymentMethod={paymentMethod} onPaymentMethodChange={setPaymentMethod} />
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6"><MedicineSearchPanel searchQuery={searchQuery} onSearchChange={(value) => { setSearchQuery(value); setSuccessMessage(''); setSelectionError(''); }} onBarcodeScan={handleBarcodeScan} results={searchResults} selectedMedicine={selectedMedicine} quantity={quantity} remainingStock={remainingStock} onQuantityChange={(event) => setQuantity((currentQuantity) => ({ ...currentQuantity, [event.target.name]: event.target.value }))} onSelectMedicine={handleSelectMedicine} onAddToCart={handleAddToCart} error={selectionError} /><BillSummary subtotal={subtotal} totalItems={totalItems} hasItems={cartItems.length > 0 && !cartHasInsufficientStock} onGenerateBill={generateBill} onClearCart={clearCart} successMessage={successMessage} /></div>
-      <BillingCart items={cartItems} editingId={editingId} editQuantity={editQuantity} onStartEdit={(item) => { setEditingId(item.medicine.id); setEditQuantity({ packs: String(item.packs), looseUnits: String(item.looseUnits) }); setSelectionError(''); }} onEditQuantityChange={(event) => setEditQuantity((currentQuantity) => ({ ...currentQuantity, [event.target.name]: event.target.value }))} onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditingId(null)} onRemove={(medicineId) => { setCartItems((items) => items.filter((item) => item.medicine.id !== medicineId)); if (editingId === medicineId) setEditingId(null); }} />
+      <BillingCart
+        items={cartItems}
+        editingId={editingId}
+        editQuantity={editQuantity}
+        onStartEdit={(item) => {
+          setEditingId(item.medicine.id);
+          setEditQuantity({
+            packs: String(item.packs),
+            looseUnits: String(item.looseUnits),
+          });
+          setSelectionError('');
+        }}
+        onEditQuantityChange={(event) =>
+          setEditQuantity((currentQuantity) => ({
+            ...currentQuantity,
+            [event.target.name]: event.target.value,
+          }))
+        }
+        onSaveEdit={handleSaveEdit}
+        onCancelEdit={() => setEditingId(null)}
+        onRemove={(medicineId) => {
+          setCartItems((items) =>
+            items.filter((item) => item.medicine.id !== medicineId)
+          );
+          if (editingId === medicineId) setEditingId(null);
+        }}
+      />
+
+      <InvoicePreviewModal
+        invoice={currentInvoice}
+        isOpen={showPreview}
+        onClose={async () => {
+          if (currentInvoice) {
+            await generateInvoicePdf(currentInvoice);
+
+            setBillSequence((sequence) => sequence + 1);
+            setCartItems([]);
+            setEditingId(null);
+            setCurrentInvoice(null);
+          }
+
+          setShowPreview(false);
+        }}
+      />
+
     </div>
   );
+
 };

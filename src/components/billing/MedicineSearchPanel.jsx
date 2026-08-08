@@ -1,14 +1,81 @@
-import { PackagePlus, Search } from 'lucide-react';
+import { PackagePlus, Search, MapPin } from 'lucide-react';
 import { calculateSellingPricePerUnit, calculateTotalUnits, formatPackagingPreview, formatStockDisplay } from '../../utils/medicineCalculations';
+import { allocateFifoBatches, isSellableBatch } from '../../utils/fifoBatchUtils';
 import { BarcodeScannerField } from '../common/BarcodeScannerField';
 
 const inputClassName = 'w-full px-3 py-2.5 text-sm bg-slate-50/80 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 rounded-xl border border-slate-200/70 dark:border-slate-700/70 focus:border-blue-500/80 focus:outline-none focus:ring-4 focus:ring-blue-500/10';
 
-export const MedicineSearchPanel = ({ searchQuery, onSearchChange, onBarcodeScan, results, selectedMedicine, quantity, remainingStock, onQuantityChange, onSelectMedicine, onAddToCart, error }) => (
+export const MedicineSearchPanel = ({ searchQuery, onSearchChange, onBarcodeScan, results, selectedMedicine, quantity, remainingStock, onQuantityChange, onSelectMedicine, onAddToCart, error }) => {
+  let fifoResult = null;
+  let requestedUnits = 0;
+  if (selectedMedicine && (Number(quantity.packs) > 0 || Number(quantity.looseUnits) > 0)) {
+    requestedUnits = Number(quantity.packs || 0) * selectedMedicine.packaging.unitsPerPack + Number(quantity.looseUnits || 0);
+    fifoResult = allocateFifoBatches(selectedMedicine, requestedUnits);
+  }
+
+  const availableBatches = selectedMedicine?.batches ? selectedMedicine.batches.filter(b => isSellableBatch(b, new Date())) : [];
+
+  return (
   <section className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800/70 shadow-xs">
     <div className="flex items-center gap-3 mb-5"><div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><Search className="w-5 h-5" /></div><div><h3 className="text-base font-bold text-slate-900 dark:text-white">Search Medicine</h3><p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Search by medicine, generic name, brand, batch, or barcode.</p></div></div>
     <BarcodeScannerField label="Search Medicine or Barcode" value={searchQuery} onChange={onSearchChange} onScan={onBarcodeScan} placeholder="Search medicines or scan barcode..." />
     {searchQuery.trim() && <div className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-slate-200/70 dark:border-slate-700/70 divide-y divide-slate-100 dark:divide-slate-800">{results.length ? results.map((medicine) => <button type="button" key={medicine.id} onClick={() => onSelectMedicine(medicine)} className="w-full px-3.5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{medicine.name}</span><span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{medicine.genericName} · {medicine.brandName || medicine.id}</span></button>) : <p className="px-3.5 py-4 text-sm text-slate-500 dark:text-slate-400">No medicines found.</p>}</div>}
-    {selectedMedicine && <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800"><div className="flex items-start justify-between gap-4"><div><h4 className="text-sm font-bold text-slate-900 dark:text-white">{selectedMedicine.name}</h4><p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{selectedMedicine.genericName}{selectedMedicine.brandName ? ` · ${selectedMedicine.brandName}` : ''}</p></div><span className={`text-xs font-semibold ${remainingStock.isSufficient ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{remainingStock.isSufficient ? 'Available' : 'Insufficient Stock'}</span></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-xs"><div><span className="block text-slate-500 dark:text-slate-400">Available Stock</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{formatStockDisplay(selectedMedicine)}</span></div><div><span className="block text-slate-500 dark:text-slate-400">Total Units</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{calculateTotalUnits(selectedMedicine)} {selectedMedicine.packaging.inventoryUnit}</span></div><div><span className="block text-slate-500 dark:text-slate-400">Packaging</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{formatPackagingPreview(selectedMedicine.packaging)}</span></div><div><span className="block text-slate-500 dark:text-slate-400">Selling Price</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{selectedMedicine.pricing.sellingPricePerPack.toFixed(2)} / {selectedMedicine.packaging.packType}<br />{calculateSellingPricePerUnit(selectedMedicine).toFixed(2)} / {selectedMedicine.packaging.inventoryUnit}</span></div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5"><label><span className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Packs</span><input name="packs" type="number" min="0" step="1" value={quantity.packs} onChange={onQuantityChange} className={inputClassName} /></label><label><span className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Loose Units</span><input name="looseUnits" type="number" min="0" step="1" value={quantity.looseUnits} onChange={onQuantityChange} className={inputClassName} /></label></div><div className={`mt-4 px-3 py-2.5 rounded-xl text-xs font-semibold ${remainingStock.isSufficient ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'}`}>Remaining After Sale: {remainingStock.currentPacks} {selectedMedicine.packaging.packType}{remainingStock.currentPacks === 1 ? '' : 's'} + {remainingStock.looseUnits} {selectedMedicine.packaging.inventoryUnit}</div>{error && <p className="mt-3 text-xs font-medium text-rose-600 dark:text-rose-400">{error}</p>}<button type="button" disabled={!remainingStock.isSufficient} onClick={onAddToCart} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl shadow-sm shadow-blue-500/20 transition-colors"><PackagePlus className="w-4 h-4" />Add To Cart</button></div>}
+    {selectedMedicine && <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800"><div className="flex items-start justify-between gap-4"><div><h4 className="text-sm font-bold text-slate-900 dark:text-white">{selectedMedicine.name}</h4><p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{selectedMedicine.genericName}{selectedMedicine.brandName ? ` · ${selectedMedicine.brandName}` : ''}</p><p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Manufacturer: <span className="font-medium text-slate-700 dark:text-slate-300">{selectedMedicine.manufacturer || 'Unknown'}</span></p></div><span className={`text-xs font-semibold ${remainingStock.isSufficient ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{remainingStock.isSufficient ? 'Available' : 'Insufficient Stock'}</span></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-xs"><div><span className="block text-slate-500 dark:text-slate-400">Available Stock</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{formatStockDisplay(selectedMedicine)}</span></div><div><span className="block text-slate-500 dark:text-slate-400">Total Units</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{calculateTotalUnits(selectedMedicine)} {selectedMedicine.packaging.inventoryUnit}</span></div><div><span className="block text-slate-500 dark:text-slate-400">Packaging</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{formatPackagingPreview(selectedMedicine.packaging)}</span></div><div><span className="block text-slate-500 dark:text-slate-400">Selling Price</span><span className="block font-semibold text-slate-900 dark:text-white mt-1">{selectedMedicine.pricing.sellingPricePerPack.toFixed(2)} / {selectedMedicine.packaging.packType}<br />{calculateSellingPricePerUnit(selectedMedicine).toFixed(2)} / {selectedMedicine.packaging.inventoryUnit}</span></div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5"><label><span className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Packs</span><input name="packs" type="number" min="0" step="1" value={quantity.packs} onChange={onQuantityChange} className={inputClassName} /></label><label><span className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Loose Units</span><input name="looseUnits" type="number" min="0" step="1" value={quantity.looseUnits} onChange={onQuantityChange} className={inputClassName} /></label></div><div className={`mt-4 px-3 py-2.5 rounded-xl text-xs font-semibold ${remainingStock.isSufficient ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'}`}>Remaining After Sale: {remainingStock.currentPacks} {selectedMedicine.packaging.packType}{remainingStock.currentPacks === 1 ? '' : 's'} + {remainingStock.looseUnits} {selectedMedicine.packaging.inventoryUnit}</div>
+    {requestedUnits === 0 && (
+      <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Available Batch Locations</h4>
+        <div className="space-y-3">
+          {availableBatches.length > 0 ? availableBatches.map((batch, idx) => (
+            <div key={idx} className="flex justify-between items-start text-sm">
+              <div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100">
+                  Batch: {batch.batchNumber}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  Available: {batch.quantityRemaining} {selectedMedicine.packaging.inventoryUnit}{batch.quantityRemaining !== 1 ? 's' : ''} • Expiry: {batch.expiryDate || 'Not available'}
+                </div>
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                  {(batch.rackLocation || selectedMedicine.rackLocation) ? (batch.rackLocation || selectedMedicine.rackLocation).replace('-', ' → ') : 'Location not assigned'}
+                </div>
+              </div>
+            </div>
+          )) : (
+            <div className="text-xs font-medium text-rose-600 dark:text-rose-400">No stock available</div>
+          )}
+        </div>
+      </div>
+    )}
+    {fifoResult && fifoResult.isSufficient && fifoResult.allocations.length > 0 && (
+      <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">FIFO Pick List</h4>
+        <div className="space-y-3">
+          {fifoResult.allocations.map((alloc, idx) => (
+            <div key={idx} className="flex justify-between items-start text-sm border-b border-slate-100 dark:border-slate-700/50 pb-2 last:border-0 last:pb-0">
+              <div>
+                <div className="font-semibold text-slate-900 dark:text-slate-100">
+                  Batch: {alloc.batchNumber}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  Expiry: {alloc.expiryDate || 'Not available'}
+                </div>
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                  {alloc.rackLocation ? alloc.rackLocation.replace('-', ' → ') : 'Location not assigned'}
+                </div>
+              </div>
+              <div className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                Pick {alloc.quantitySold} {selectedMedicine.packaging.inventoryUnit}{alloc.quantitySold !== 1 ? 's' : ''}
+              </div>
+            </div>
+          ))}
+          <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700 text-xs font-bold text-right text-slate-700 dark:text-slate-300">
+            Total to Pick: {requestedUnits} {selectedMedicine.packaging.inventoryUnit}{requestedUnits !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+    )}
+    {error && <p className="mt-3 text-xs font-medium text-rose-600 dark:text-rose-400">{error}</p>}<button type="button" disabled={!remainingStock.isSufficient} onClick={onAddToCart} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl shadow-sm shadow-blue-500/20 transition-colors"><PackagePlus className="w-4 h-4" />Add To Cart</button></div>}
   </section>
-);
+  );
+};
