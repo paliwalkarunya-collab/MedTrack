@@ -20,7 +20,7 @@ export const allocateFifoBatches = (product, requestedUnits, referenceDate = new
   const batches = ensureProductBatches(product).batches.filter((batch) => isSellableBatch(batch, referenceDate)).sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
   let remaining = requestedUnits;
   const allocations = [];
-  batches.forEach((batch) => { if (remaining > 0) { const quantitySold = Math.min(batch.quantityRemaining, remaining); allocations.push({ batchId: batch.id, batchNumber: batch.batchNumber, quantitySold, unitPrice: batch.sellingPrice / getPackaging(product).unitsPerPack, sellingPrice: batch.sellingPrice, gst: batch.gst, expiryDate: batch.expiryDate || '', rackLocation: batch.rackLocation || product.rackLocation || '' }); remaining -= quantitySold; } });
+  batches.forEach((batch) => { if (remaining > 0) { const quantitySold = Math.min(batch.quantityRemaining, remaining); allocations.push({ batchId: batch.id, batchNumber: batch.batchNumber, quantitySold, unitPrice: batch.sellingPrice / getPackaging(product).unitsPerPack, sellingPrice: batch.sellingPrice, purchasePrice: batch.purchasePrice, unitCost: batch.purchasePrice / getPackaging(product).unitsPerPack, gst: batch.gst, expiryDate: batch.expiryDate || '', rackLocation: batch.rackLocation || product.rackLocation || '', supplierId: batch.supplierId || '', supplierName: batch.supplierName || '' }); remaining -= quantitySold; } });
   return { isSufficient: remaining === 0, allocations };
 };
 
