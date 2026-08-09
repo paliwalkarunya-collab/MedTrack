@@ -5,9 +5,11 @@ import { Header } from '../components/layout/Header';
 import { InventoryProvider } from '../hooks/InventoryProvider';
 import { SupplierProvider } from '../hooks/SupplierProvider';
 import { PurchaseProvider } from '../hooks/PurchaseProvider';
+import { SettingsProvider } from '../hooks/SettingsProvider';
 
 export const AppLayout = () => {
   return (
+    <SettingsProvider>
     <SupplierProvider>
     <PurchaseProvider>
     <InventoryProvider>
@@ -33,5 +35,6 @@ export const AppLayout = () => {
     </InventoryProvider>
     </PurchaseProvider>
     </SupplierProvider>
+    </SettingsProvider>
   );
 };
