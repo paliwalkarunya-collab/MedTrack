@@ -1,0 +1,5 @@
+import { Bell, Building2, Database, Palette, Settings2 } from 'lucide-react';
+
+const tabs = [{ id: 'profile', label: 'Business profile', icon: Building2 }, { id: 'operations', label: 'Operations', icon: Settings2 }, { id: 'notifications', label: 'Notifications', icon: Bell }, { id: 'appearance', label: 'Appearance', icon: Palette }, { id: 'data', label: 'Data & system', icon: Database }];
+
+export const SettingsTabs = ({ activeTab, onChange }) => <nav aria-label="Settings sections" className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-slate-800/70">{tabs.map(({ id, label, icon: Icon }) => <button type="button" key={id} onClick={() => onChange(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${activeTab === id ? 'bg-white text-blue-600 shadow-xs dark:bg-slate-900 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}><Icon className="h-3.5 w-3.5" />{label}</button>)}</nav>;
