@@ -7,5 +7,6 @@ export const SidebarContext = createContext({
   toggleMobileMenu: () => {},
   closeMobileMenu: () => {},
   isDarkMode: false,
+  setDarkMode: () => {},
   toggleDarkMode: () => {},
 });
