@@ -7,6 +7,7 @@ const pageTitles = {
   '/': 'Dashboard Overview',
   '/inventory': 'Medicine Inventory',
   '/billing': 'Billing',
+  '/billing-history': 'Billing History',
   '/purchases': 'Purchase Orders',
   '/suppliers': 'Suppliers',
   '/analytics': 'Analytics & Insights',

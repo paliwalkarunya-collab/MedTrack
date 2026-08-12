@@ -1,7 +1,7 @@
 import { calculateTotalUnits } from './medicineCalculations';
 import { getPackaging } from './productModel';
 
-export const createPurchaseBatch = ({ purchaseId, supplier, product, batchNumber, manufacturingDate, expiryDate, purchasePrice, sellingPrice, gst, quantityPacks }) => {
+export const createPurchaseBatch = ({ purchaseId, supplier, product, batchNumber, manufacturingDate, expiryDate, purchasePrice, sellingPrice, gst, quantityPacks, rackLocation }) => {
   const { unitsPerPack } = getPackaging(product);
   const quantityReceived = Number(quantityPacks) * unitsPerPack;
   return {
@@ -18,6 +18,7 @@ export const createPurchaseBatch = ({ purchaseId, supplier, product, batchNumber
     quantityReceived,
     quantityRemaining: quantityReceived,
     status: 'active',
+    rackLocation: rackLocation || '',
   };
 };
 

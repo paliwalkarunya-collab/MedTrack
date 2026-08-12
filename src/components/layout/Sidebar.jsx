@@ -6,7 +6,6 @@ import {
   ReceiptText,
   ShoppingCart,
   Building2,
-  BarChart3,
   FileText,
   Bell,
   Settings,
@@ -19,6 +18,8 @@ import {
   Grid,
   AlertTriangle,
   Clock,
+  RotateCcw,
+  History,
   CalendarDays,
   UsersRound,
 } from 'lucide-react';
@@ -37,9 +38,11 @@ const mainNavItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Inventory', path: '/inventory', icon: Package, hasSubmenu: true },
   { name: 'Billing', path: '/billing', icon: ReceiptText },
+  { name: 'Billing History', path: '/billing-history', icon: FileText },
+  { name: 'Returns & Refunds', path: '/returns', icon: RotateCcw },
+  { name: 'Return History', path: '/return-history', icon: History },
   { name: 'Purchases', path: '/purchases', icon: ShoppingCart },
   { name: 'Suppliers', path: '/suppliers', icon: Building2 },
-  { name: 'Analytics', path: '/analytics', icon: BarChart3 },
   { name: 'Reports', path: '/reports', icon: FileText },
   { name: 'Alerts', path: '/alerts', icon: Bell },
   { name: 'Expiry Management', path: '/expiry', icon: CalendarDays },
@@ -77,7 +80,6 @@ export const Sidebar = () => {
             </div>
           )}
         </div>
-
         {/* Mobile Close Button */}
         <button
           onClick={closeMobileMenu}
@@ -119,7 +121,6 @@ export const Sidebar = () => {
                     <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
                     {!isCollapsed && <span className="truncate">{item.name}</span>}
                   </div>
-
                   {!isCollapsed && (
                     <ChevronDown
                       className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
@@ -127,7 +128,6 @@ export const Sidebar = () => {
                       }`}
                     />
                   )}
-
                   {/* Tooltip for collapsed mode */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-lg z-50">
@@ -144,7 +144,6 @@ export const Sidebar = () => {
                       const isSubActive =
                         location.pathname + location.search === subItem.path ||
                         (subItem.path === '/inventory' && location.pathname === '/inventory' && !location.search);
-
                       return (
                         <NavLink
                           key={subItem.name}
@@ -179,9 +178,7 @@ export const Sidebar = () => {
               } ${isCollapsed ? 'justify-center px-2' : ''}`}
             >
               <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
-
               {!isCollapsed && <span className="truncate">{item.name}</span>}
-
               {/* Tooltip for collapsed desktop view */}
               {isCollapsed && (
                 <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-lg z-50">
