@@ -1,11 +1,43 @@
 import { Package, Layers, AlertTriangle, Clock } from 'lucide-react';
+import { useInventory } from '../../hooks/useInventory';
+import { getDaysRemaining, getExpiryStatus } from '../../utils/expiryUtils';
+import { ensureProductBatches } from '../../utils/fifoBatchUtils';
+import { useMemo } from 'react';
 
 export const InventoryOverviewCard = () => {
+  const { inventory } = useInventory();
+
+  const statsObj = useMemo(() => {
+    let categories = new Set();
+    let lowStock = 0;
+    let expiringSoon = 0;
+
+    inventory.forEach((product) => {
+      if (product.category) categories.add(product.category);
+
+      const totalUnits = product.stock?.currentPacks * (product.packaging?.unitsPerPack || 1) + (product.stock?.looseUnits || 0);
+      const minUnits = product.minStockLevel || 10;
+      if (totalUnits <= minUnits) lowStock++;
+
+      const normalised = ensureProductBatches(product);
+      const batches = normalised.batches ?? [];
+      
+      batches.forEach((batch) => {
+        const rawExpiry = batch.expiryDate ?? product.expiryDate;
+        if (!rawExpiry || rawExpiry === '2099-12-31') return;
+        const status = getExpiryStatus(getDaysRemaining(rawExpiry));
+        if (status === 'critical' || status === 'expiring') expiringSoon++;
+      });
+    });
+
+    return { total: inventory.length, categories: categories.size, lowStock, expiringSoon };
+  }, [inventory]);
+
   const stats = [
-    { label: 'Total Medicines', value: '1,420', icon: Package, color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60' },
-    { label: 'Categories', value: '12', icon: Layers, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60' },
-    { label: 'Low Stock', value: '18', icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60' },
-    { label: 'Expiring Soon', value: '7', icon: Clock, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60' },
+    { label: 'Total Medicines', value: statsObj.total.toString(), icon: Package, color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60' },
+    { label: 'Categories', value: statsObj.categories.toString(), icon: Layers, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60' },
+    { label: 'Low Stock', value: statsObj.lowStock.toString(), icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60' },
+    { label: 'Expiring Soon', value: statsObj.expiringSoon.toString(), icon: Clock, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60' },
   ];
 
   return (

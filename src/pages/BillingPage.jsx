@@ -1,4 +1,4 @@
-import InvoicePreviewModal from '../components/billing/InvoicePreviewModal';
+﻿import InvoicePreviewModal from '../components/billing/InvoicePreviewModal';
 import { useCallback, useMemo, useState } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { calculateRemainingStock, calculateSellingPricePerUnit } from '../utils/medicineCalculations';
@@ -6,9 +6,11 @@ import { CustomerDetailsCard } from '../components/billing/CustomerDetailsCard';
 import { MedicineSearchPanel } from '../components/billing/MedicineSearchPanel';
 import { BillingCart } from '../components/billing/BillingCart';
 import { BillSummary } from '../components/billing/BillSummary';
+import { BillingStepper } from '../components/billing/BillingStepper';
 import { allocateFifoBatches } from '../utils/fifoBatchUtils';
 import { useBillingHistory } from '../hooks/useBillingHistory';
 import { generateInvoicePdf } from '../utils/invoiceUtils';
+import { ArrowLeft } from 'lucide-react';
 
 const emptyQuantity = { packs: '0', looseUnits: '0' };
 const createBillNumber = (sequence) => `BILL-${new Date().getFullYear()}-${String(sequence).padStart(4, '0')}`;
@@ -47,6 +49,7 @@ export const BillingPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [currentInvoice, setCurrentInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [activeStep, setActiveStep] = useState(1);
 
   const selectedMedicine = useMemo(
     () => inventory.find((medicine) => medicine.id === selectedMedicineId) || null,
@@ -159,56 +162,90 @@ export const BillingPage = () => {
   };
 
   return (
-    <div className="space-y-6 pb-6">
-      <div><h2 className="text-xl font-bold text-slate-900 dark:text-white">Billing</h2><p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Create customer bills and update stock automatically.</p></div>
-      <CustomerDetailsCard billNumber={createBillNumber(billSequence)} customer={customer} onChange={(event) => setCustomer((currentCustomer) => ({ ...currentCustomer, [event.target.name]: event.target.value }))} paymentMethod={paymentMethod} onPaymentMethodChange={setPaymentMethod} />
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6"><MedicineSearchPanel searchQuery={searchQuery} onSearchChange={(value) => { setSearchQuery(value); setSuccessMessage(''); setSelectionError(''); }} onBarcodeScan={handleBarcodeScan} results={searchResults} selectedMedicine={selectedMedicine} quantity={quantity} remainingStock={remainingStock} onQuantityChange={(event) => setQuantity((currentQuantity) => ({ ...currentQuantity, [event.target.name]: event.target.value }))} onSelectMedicine={handleSelectMedicine} onAddToCart={handleAddToCart} error={selectionError} /><BillSummary subtotal={subtotal} totalItems={totalItems} hasItems={cartItems.length > 0 && !cartHasInsufficientStock} onGenerateBill={generateBill} onClearCart={clearCart} successMessage={successMessage} /></div>
-      <BillingCart
-        items={cartItems}
-        editingId={editingId}
-        editQuantity={editQuantity}
-        onStartEdit={(item) => {
-          setEditingId(item.medicine.id);
-          setEditQuantity({
-            packs: String(item.packs),
-            looseUnits: String(item.looseUnits),
-          });
-          setSelectionError('');
-        }}
-        onEditQuantityChange={(event) =>
-          setEditQuantity((currentQuantity) => ({
-            ...currentQuantity,
-            [event.target.name]: event.target.value,
-          }))
-        }
-        onSaveEdit={handleSaveEdit}
-        onCancelEdit={() => setEditingId(null)}
-        onRemove={(medicineId) => {
-          setCartItems((items) =>
-            items.filter((item) => item.medicine.id !== medicineId)
-          );
-          if (editingId === medicineId) setEditingId(null);
-        }}
-      />
+    <div className="min-h-screen bg-[#f8f9fb]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-end justify-between gap-4 mb-5">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">Billing</h1>
+              <p className="text-[13px] text-slate-500 mt-0.5">Create bills and update inventory automatically.</p>
+            </div>
+          </div>
+          <BillingStepper activeStep={activeStep} />
+        </div>
 
-      <InvoicePreviewModal
-        invoice={currentInvoice}
-        isOpen={showPreview}
-        onClose={async () => {
-          if (currentInvoice) {
-            await generateInvoicePdf(currentInvoice);
+        {/* Step 1 */}
+        {activeStep === 1 && (
+          <CustomerDetailsCard
+            billNumber={createBillNumber(billSequence)}
+            customer={customer}
+            onChange={(event) => setCustomer((currentCustomer) => ({ ...currentCustomer, [event.target.name]: event.target.value }))}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+            onContinue={() => setActiveStep(2)}
+          />
+        )}
 
-            setBillSequence((sequence) => sequence + 1);
-            setCartItems([]);
-            setEditingId(null);
-            setCurrentInvoice(null);
-          }
+        {/* Step 2 */}
+        {activeStep === 2 && (
+          <div className="space-y-5">
+            <button type="button" onClick={() => setActiveStep(1)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-900 transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus:ring-2 focus:ring-slate-900/10 rounded-md px-1.5 py-1 -ml-1.5 cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />Customer Details</button>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <MedicineSearchPanel searchQuery={searchQuery} onSearchChange={(value) => { setSearchQuery(value); setSuccessMessage(''); setSelectionError(''); }} onBarcodeScan={handleBarcodeScan} results={searchResults} selectedMedicine={selectedMedicine} quantity={quantity} remainingStock={remainingStock} onQuantityChange={(event) => setQuantity((currentQuantity) => ({ ...currentQuantity, [event.target.name]: event.target.value }))} onSelectMedicine={handleSelectMedicine} onAddToCart={handleAddToCart} error={selectionError} />
+                <BillingCart
+                  items={cartItems}
+                  editingId={editingId}
+                  editQuantity={editQuantity}
+                  onStartEdit={(item) => {
+                    setEditingId(item.medicine.id);
+                    setEditQuantity({
+                      packs: String(item.packs),
+                      looseUnits: String(item.looseUnits),
+                    });
+                    setSelectionError('');
+                  }}
+                  onEditQuantityChange={(event) =>
+                    setEditQuantity((currentQuantity) => ({
+                      ...currentQuantity,
+                      [event.target.name]: event.target.value,
+                    }))
+                  }
+                  onSaveEdit={handleSaveEdit}
+                  onCancelEdit={() => setEditingId(null)}
+                  onRemove={(medicineId) => {
+                    setCartItems((items) =>
+                      items.filter((item) => item.medicine.id !== medicineId)
+                    );
+                    if (editingId === medicineId) setEditingId(null);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-1">
+                <BillSummary subtotal={subtotal} totalItems={totalItems} hasItems={cartItems.length > 0 && !cartHasInsufficientStock} onGenerateBill={generateBill} onClearCart={clearCart} successMessage={successMessage} discount={0} gst={0} />
+              </div>
+            </div>
+          </div>
+        )}
 
-          setShowPreview(false);
-        }}
-      />
+        <InvoicePreviewModal
+          invoice={currentInvoice}
+          isOpen={showPreview}
+          onClose={async () => {
+            if (currentInvoice) {
+              await generateInvoicePdf(currentInvoice);
 
+              setBillSequence((sequence) => sequence + 1);
+              setCartItems([]);
+              setEditingId(null);
+              setCurrentInvoice(null);
+            }
+
+            setShowPreview(false);
+          }}
+        />
+      </div>
     </div>
   );
-
 };

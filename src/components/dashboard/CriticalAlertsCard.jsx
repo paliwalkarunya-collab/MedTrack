@@ -1,13 +1,48 @@
 import { AlertTriangle, Clock, XCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useInventory } from '../../hooks/useInventory';
+import { getDaysRemaining, getExpiryStatus } from '../../utils/expiryUtils';
+import { ensureProductBatches } from '../../utils/fifoBatchUtils';
+import { useMemo } from 'react';
 
 export const CriticalAlertsCard = () => {
   const navigate = useNavigate();
+  const { inventory } = useInventory();
+
+  const counts = useMemo(() => {
+    let lowStock = 0;
+    let expiringSoon = 0;
+    let expired = 0;
+
+    inventory.forEach((product) => {
+      // Low stock check
+      const totalUnits = product.stock?.currentPacks * (product.packaging?.unitsPerPack || 1) + (product.stock?.looseUnits || 0);
+      const minUnits = product.minStockLevel || 10;
+      if (totalUnits <= minUnits) lowStock++;
+
+      // Expiry check
+      const normalised = ensureProductBatches(product);
+      const batches = normalised.batches ?? [];
+      
+      batches.forEach((batch) => {
+        const rawExpiry = batch.expiryDate ?? product.expiryDate;
+        if (!rawExpiry || rawExpiry === '2099-12-31') return;
+        
+        const daysRemaining = getDaysRemaining(rawExpiry);
+        const status = getExpiryStatus(daysRemaining);
+        
+        if (status === 'expired') expired++;
+        else if (status === 'critical' || status === 'expiring') expiringSoon++;
+      });
+    });
+
+    return { lowStock, expiringSoon, expired, total: lowStock + expiringSoon + expired };
+  }, [inventory]);
 
   const alerts = [
-    { label: 'Low Stock', count: 18, icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60' },
-    { label: 'Expiring Soon', count: 7, icon: Clock, color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60' },
-    { label: 'Expired Medicines', count: 3, icon: XCircle, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60' },
+    { label: 'Low Stock', count: counts.lowStock, icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60' },
+    { label: 'Expiring Soon', count: counts.expiringSoon, icon: Clock, color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60' },
+    { label: 'Expired Medicines', count: counts.expired, icon: XCircle, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60' },
   ];
 
   return (
@@ -18,7 +53,7 @@ export const CriticalAlertsCard = () => {
             Critical Alerts
           </span>
           <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-0.5 rounded-md">
-            28 Items Flagged
+            {counts.total} Items Flagged
           </span>
         </div>
 

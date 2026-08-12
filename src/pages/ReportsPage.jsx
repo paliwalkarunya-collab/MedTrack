@@ -3,6 +3,7 @@ import { useBillingHistory } from '../hooks/useBillingHistory';
 import { usePurchases } from '../hooks/usePurchases';
 import { useInventory } from '../hooks/useInventory';
 import { useSuppliers } from '../hooks/useSuppliers';
+import { useReturns } from '../hooks/useReturns';
 import { exportReportToPdf, exportReportToExcel } from '../utils/reportExportUtils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { getPackaging } from '../utils/productModel';
@@ -15,6 +16,7 @@ export const ReportsPage = () => {
   const { purchases } = usePurchases();
   const { inventory } = useInventory();
   const { suppliers } = useSuppliers();
+  const { returns } = useReturns();
 
   const [activeTab, setActiveTab] = useState('sales');
   const [dateFilter, setDateFilter] = useState('this_month');
@@ -95,46 +97,139 @@ export const ReportsPage = () => {
     return items;
   };
 
-  // --- Sales Data ---
+  const getFilteredReturnItems = () => {
+    let returnItems = [];
+    returns.forEach(ret => {
+      if (!dateFiltered(ret.createdAt)) return;
+
+      const originalInvoice = invoices.find(inv => inv.invoiceId === ret.invoiceId);
+      if (!originalInvoice) return;
+
+      ret.items.forEach(retItem => {
+        const originalInvItem = originalInvoice.items.find(i => i.medicine.id === retItem.medicineId);
+        const originalBatch = originalInvItem?.batchUsed?.find(b => b.batchId === retItem.batchId);
+        
+        const supplierId = originalBatch?.supplierId;
+        const supplierName = originalBatch?.supplierName;
+        const unitCost = originalBatch?.unitCost ?? 0;
+
+        const matchesMedicine = medicineFilter === 'all' || retItem.medicineId === medicineFilter;
+        const matchesSupplier = supplierFilter === 'all' || (supplierId === supplierFilter || supplierName === suppliers.find(s=>s.id===supplierFilter)?.supplierName);
+
+        if (matchesMedicine && matchesSupplier) {
+          returnItems.push({
+            ...retItem,
+            returnDate: ret.createdAt,
+            returnId: ret.returnId,
+            unitCost,
+            supplierId,
+            supplierName
+          });
+        }
+      });
+    });
+    return returnItems;
+  };
+
+  // --- Sales & Return Data ---
   const salesItems = getFilteredInvoiceItems();
-  const totalSales = salesItems.reduce((sum, item) => sum + item.lineTotal, 0);
-  const totalQuantitySold = salesItems.reduce((sum, item) => sum + (item.packs * getPackaging(item.medicine).unitsPerPack + item.looseUnits), 0);
+  const returnItems = getFilteredReturnItems();
+
+  const grossSales = salesItems.reduce((sum, item) => sum + item.lineTotal, 0);
+  const grossQuantitySold = salesItems.reduce((sum, item) => sum + (item.packs * getPackaging(item.medicine).unitsPerPack + item.looseUnits), 0);
+  const grossCOGS = salesItems.reduce((sum, item) => {
+    return sum + (item.batchUsed ? item.batchUsed.reduce((csum, alloc) => csum + ((alloc.unitCost ?? 0) * alloc.quantitySold), 0) : 0);
+  }, 0);
+
+  const returnedRevenue = returnItems.reduce((sum, item) => sum + item.refundAmount, 0);
+  const returnedQuantity = returnItems.reduce((sum, item) => sum + item.returnedQuantity, 0);
+  const returnedCOGS = returnItems.reduce((sum, item) => sum + (item.unitCost * item.returnedQuantity), 0);
+
+  const netSales = grossSales - returnedRevenue;
+  const netQuantitySold = grossQuantitySold - returnedQuantity;
+  const netCOGS = grossCOGS - returnedCOGS;
+  const grossProfit = netSales - netCOGS;
+  const profitMargin = netSales > 0 ? ((grossProfit / netSales) * 100).toFixed(1) : 0;
 
   const salesByMedicine = useMemo(() => {
     const map = new Map();
+    
     salesItems.forEach(item => {
       const id = item.medicine.id;
-      if (!map.has(id)) map.set(id, { name: item.medicine.name, qty: 0, revenue: 0, cogs: 0, profit: 0 });
+      if (!map.has(id)) map.set(id, { name: item.medicine.name, grossQty: 0, grossRev: 0, grossCogs: 0, retQty: 0, retRev: 0, retCogs: 0 });
       const stat = map.get(id);
+      
       const qty = item.packs * getPackaging(item.medicine).unitsPerPack + item.looseUnits;
+      const cogs = item.batchUsed ? item.batchUsed.reduce((csum, alloc) => csum + ((alloc.unitCost ?? 0) * alloc.quantitySold), 0) : 0;
       
-      const cogs = item.batchUsed ? item.batchUsed.reduce((csum, alloc) => {
-        const cost = alloc.unitCost ?? 0;
-        return csum + (cost * alloc.quantitySold);
-      }, 0) : 0;
-      
-      stat.qty += qty;
-      stat.revenue += item.lineTotal;
-      stat.cogs += cogs;
-      stat.profit += (item.lineTotal - cogs);
+      stat.grossQty += qty;
+      stat.grossRev += item.lineTotal;
+      stat.grossCogs += cogs;
     });
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [salesItems]);
 
-  const salesTrend = useMemo(() => {
+    returnItems.forEach(item => {
+      const id = item.medicineId;
+      if (!map.has(id)) map.set(id, { name: item.medicineName, grossQty: 0, grossRev: 0, grossCogs: 0, retQty: 0, retRev: 0, retCogs: 0 });
+      const stat = map.get(id);
+
+      stat.retQty += item.returnedQuantity;
+      stat.retRev += item.refundAmount;
+      stat.retCogs += (item.unitCost * item.returnedQuantity);
+    });
+
+    return Array.from(map.values()).map(stat => {
+      const netQty = stat.grossQty - stat.retQty;
+      const netRev = stat.grossRev - stat.retRev;
+      const netCogs = stat.grossCogs - stat.retCogs;
+      const netProfit = netRev - netCogs;
+      return {
+        name: stat.name,
+        qty: netQty,
+        revenue: netRev,
+        cogs: netCogs,
+        profit: netProfit
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
+  }, [salesItems, returnItems]);
+
+  const combinedTrend = useMemo(() => {
     const map = new Map();
+
     salesItems.forEach(item => {
       const date = new Date(item.invoiceDate).toLocaleDateString();
-      if (!map.has(date)) map.set(date, { date, sales: 0 });
-      map.get(date).sales += item.lineTotal;
+      if (!map.has(date)) map.set(date, { date, grossRev: 0, grossCogs: 0, retRev: 0, retCogs: 0 });
+      
+      const cogs = item.batchUsed ? item.batchUsed.reduce((csum, alloc) => csum + ((alloc.unitCost ?? 0) * alloc.quantitySold), 0) : 0;
+      
+      map.get(date).grossRev += item.lineTotal;
+      map.get(date).grossCogs += cogs;
     });
-    return Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [salesItems]);
+
+    returnItems.forEach(item => {
+      const date = new Date(item.returnDate).toLocaleDateString();
+      if (!map.has(date)) map.set(date, { date, grossRev: 0, grossCogs: 0, retRev: 0, retCogs: 0 });
+
+      map.get(date).retRev += item.refundAmount;
+      map.get(date).retCogs += (item.unitCost * item.returnedQuantity);
+    });
+
+    return Array.from(map.values()).map(stat => {
+      const netRev = stat.grossRev - stat.retRev;
+      const netCogs = stat.grossCogs - stat.retCogs;
+      return {
+        date: stat.date,
+        sales: netRev,
+        revenue: netRev,
+        profit: netRev - netCogs
+      };
+    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [salesItems, returnItems]);
+
+  const salesTrend = combinedTrend;
+  const profitTrend = combinedTrend;
 
   // --- Purchase Data ---
   const purchaseList = getFilteredPurchases();
-  // purchasePrice is per pack, quantityPacks is recorded. So cost = purchasePrice * quantityPacks.
-  // Quantity total in packs or units? Display in packs to match purchase screen.
   const totalPurchaseCost = purchaseList.reduce((sum, p) => sum + (p.purchasePrice * (p.quantityPacks || 0)), 0);
   const totalQuantityPurchased = purchaseList.reduce((sum, p) => sum + (p.quantityPacks || 0), 0);
   
@@ -158,31 +253,6 @@ export const ReportsPage = () => {
     return Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [purchaseList]);
 
-  // --- Profit Data ---
-  const totalCOGS = salesItems.reduce((sum, item) => {
-    return sum + (item.batchUsed ? item.batchUsed.reduce((csum, alloc) => {
-      const cost = alloc.unitCost ?? 0;
-      return csum + (cost * alloc.quantitySold);
-    }, 0) : 0);
-  }, 0);
-  const grossProfit = totalSales - totalCOGS;
-  const profitMargin = totalSales ? ((grossProfit / totalSales) * 100).toFixed(1) : 0;
-
-  const profitTrend = useMemo(() => {
-    const map = new Map();
-    salesItems.forEach(item => {
-      const date = new Date(item.invoiceDate).toLocaleDateString();
-      if (!map.has(date)) map.set(date, { date, profit: 0, revenue: 0 });
-      const cogs = item.batchUsed ? item.batchUsed.reduce((csum, alloc) => {
-        const cost = alloc.unitCost ?? 0;
-        return csum + (cost * alloc.quantitySold);
-      }, 0) : 0;
-      map.get(date).revenue += item.lineTotal;
-      map.get(date).profit += (item.lineTotal - cogs);
-    });
-    return Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [salesItems]);
-
 
   const getExportFilters = () => {
     const f = [`Date: ${dateFilter}`];
@@ -201,9 +271,9 @@ export const ReportsPage = () => {
   const handleExportPDF = () => {
     if (activeTab === 'sales') {
       exportReportToPdf('Sales Report', 
-        [{key:'name', header:'Medicine'}, {key:'qty', header:'Quantity Sold'}, {key:'rev', header:'Revenue'}, {key:'prof', header:'Profit'}],
+        [{key:'name', header:'Medicine'}, {key:'qty', header:'Net Quantity Sold'}, {key:'rev', header:'Net Revenue'}, {key:'prof', header:'Net Profit'}],
         salesByMedicine.map(s => ({ name: s.name, qty: s.qty, rev: money(s.revenue), prof: money(s.profit) })),
-        [{label: 'Total Sales', value: money(totalSales)}, {label: 'Invoices', value: numInvoices.toString()}],
+        [{label: 'Net Sales', value: money(netSales)}, {label: 'Invoices', value: numInvoices.toString()}],
         getExportFilters()
       );
     } else if (activeTab === 'purchases') {
@@ -215,9 +285,9 @@ export const ReportsPage = () => {
       );
     } else if (activeTab === 'profit') {
       exportReportToPdf('Profit Report', 
-        [{key:'name', header:'Medicine'}, {key:'rev', header:'Revenue'}, {key:'prof', header:'Profit'}],
+        [{key:'name', header:'Medicine'}, {key:'rev', header:'Net Revenue'}, {key:'prof', header:'Net Profit'}],
         salesByMedicine.map(s => ({ name: s.name, rev: money(s.revenue), prof: money(s.profit) })),
-        [{label: 'Gross Profit', value: money(grossProfit)}, {label: 'Margin', value: `${profitMargin}%`}],
+        [{label: 'Net Profit', value: money(grossProfit)}, {label: 'Margin', value: `${profitMargin}%`}],
         getExportFilters()
       );
     }
@@ -226,9 +296,9 @@ export const ReportsPage = () => {
   const handleExportExcel = () => {
     if (activeTab === 'sales') {
       exportReportToExcel('Sales Report', 
-        [{key:'name', header:'Medicine'}, {key:'qty', header:'Quantity Sold'}, {key:'rev', header:'Revenue'}, {key:'prof', header:'Profit'}],
+        [{key:'name', header:'Medicine'}, {key:'qty', header:'Net Quantity Sold'}, {key:'rev', header:'Net Revenue'}, {key:'prof', header:'Net Profit'}],
         salesByMedicine.map(s => ({ name: s.name, qty: s.qty, rev: s.revenue, prof: s.profit })),
-        [{label: 'Total Sales', value: totalSales}],
+        [{label: 'Net Sales', value: netSales}],
         getExportFilters()
       );
     } else if (activeTab === 'purchases') {
@@ -240,9 +310,9 @@ export const ReportsPage = () => {
       );
     } else if (activeTab === 'profit') {
       exportReportToExcel('Profit Report', 
-        [{key:'name', header:'Medicine'}, {key:'rev', header:'Revenue'}, {key:'prof', header:'Profit'}],
+        [{key:'name', header:'Medicine'}, {key:'rev', header:'Net Revenue'}, {key:'prof', header:'Net Profit'}],
         salesByMedicine.map(s => ({ name: s.name, rev: s.revenue, prof: s.profit })),
-        [{label: 'Gross Profit', value: grossProfit}],
+        [{label: 'Net Profit', value: grossProfit}],
         getExportFilters()
       );
     }
@@ -331,25 +401,25 @@ export const ReportsPage = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total Sales / Revenue</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{money(totalSales)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Net Sales / Revenue</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{money(netSales)}</p>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Number of Invoices</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">{numInvoices}</p>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total Quantity Sold</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalQuantitySold}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Net Quantity Sold</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{netQuantitySold}</p>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Avg Invoice Value</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{money(numInvoices ? totalSales / numInvoices : 0)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Avg Net Invoice Value</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{money(numInvoices ? netSales / numInvoices : 0)}</p>
               </div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60 h-80">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-4">Sales Trend</h3>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-4">Net Sales Trend</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={salesTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
@@ -366,9 +436,9 @@ export const ReportsPage = () => {
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300">
                   <tr>
                     <th className="px-6 py-4 font-medium">Medicine</th>
-                    <th className="px-6 py-4 font-medium text-right">Quantity Sold</th>
-                    <th className="px-6 py-4 font-medium text-right">Revenue</th>
-                    <th className="px-6 py-4 font-medium text-right">Profit</th>
+                    <th className="px-6 py-4 font-medium text-right">Net Quantity Sold</th>
+                    <th className="px-6 py-4 font-medium text-right">Net Revenue</th>
+                    <th className="px-6 py-4 font-medium text-right">Net Profit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
@@ -447,15 +517,15 @@ export const ReportsPage = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total Revenue</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{money(totalSales)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Net Revenue</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{money(netSales)}</p>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Cost of Goods Sold (COGS)</p>
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-500">{money(totalCOGS)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Net Cost of Goods Sold (COGS)</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-500">{money(netCOGS)}</p>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Gross Profit</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Net Profit</p>
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">{money(grossProfit)}</p>
               </div>
               <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60">
@@ -465,7 +535,7 @@ export const ReportsPage = () => {
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-200/60 dark:border-slate-800/60 h-80">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-4">Profit Trend</h3>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-4">Net Profit Trend</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={profitTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
@@ -473,8 +543,8 @@ export const ReportsPage = () => {
                   <YAxis stroke="#64748b" fontSize={12} tickFormatter={val => `₹${val}`} />
                   <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }} />
                   <Legend />
-                  <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={2} />
-                  <Line type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="revenue" name="Net Revenue" stroke="#3b82f6" strokeWidth={2} />
+                  <Line type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -484,9 +554,9 @@ export const ReportsPage = () => {
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300">
                   <tr>
                     <th className="px-6 py-4 font-medium">Medicine</th>
-                    <th className="px-6 py-4 font-medium text-right">Revenue</th>
-                    <th className="px-6 py-4 font-medium text-right">COGS</th>
-                    <th className="px-6 py-4 font-medium text-right">Profit</th>
+                    <th className="px-6 py-4 font-medium text-right">Net Revenue</th>
+                    <th className="px-6 py-4 font-medium text-right">Net COGS</th>
+                    <th className="px-6 py-4 font-medium text-right">Net Profit</th>
                     <th className="px-6 py-4 font-medium text-right">Margin</th>
                   </tr>
                 </thead>

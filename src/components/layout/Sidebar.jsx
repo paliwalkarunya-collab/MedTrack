@@ -39,7 +39,7 @@ const mainNavItems = [
   { name: 'Inventory', path: '/inventory', icon: Package, hasSubmenu: true },
   { name: 'Billing', path: '/billing', icon: ReceiptText },
   { name: 'Billing History', path: '/billing-history', icon: FileText },
-  { name: 'Returns & Refunds', path: '/returns', icon: RotateCcw },
+  { name: 'Returns', path: '/returns', icon: RotateCcw },
   { name: 'Return History', path: '/return-history', icon: History },
   { name: 'Purchases', path: '/purchases', icon: ShoppingCart },
   { name: 'Suppliers', path: '/suppliers', icon: Building2 },
