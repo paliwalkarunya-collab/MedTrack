@@ -1,6 +1,7 @@
-import { useLocation } from 'react-router-dom';
-import { Menu, Search, Bell, Moon, Sun, User } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { LogOut, Menu, Search, Bell, Moon, Sun, User } from 'lucide-react';
 import { useSidebar } from '../../hooks/useSidebarContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const pageTitles = {
   '/': 'Dashboard Overview',
@@ -13,11 +14,14 @@ const pageTitles = {
   '/alerts': 'Alerts & Expirations',
   '/expiry': 'Expiry Management',
   '/settings': 'System Settings',
+  '/users': 'User Management',
 };
 
 export const Header = () => {
   const { toggleMobileMenu, isDarkMode, toggleDarkMode } = useSidebar();
+  const { currentUser, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const title = pageTitles[location.pathname] || 'MedTrack';
 
@@ -85,9 +89,10 @@ export const Header = () => {
             <User className="w-4.5 h-4.5" />
           </div>
           <div className="hidden md:flex flex-col text-left">
-            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight">Dr. Sarah Jenkins</span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">Head Pharmacist</span>
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight">{currentUser?.name || 'User'}</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">{currentUser?.role || 'Account'}</span>
           </div>
+          <button type="button" onClick={() => { logout(); navigate('/login', { replace: true }); }} className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40" title="Sign out" aria-label="Sign out"><LogOut className="w-4 h-4" /></button>
         </div>
       </div>
     </header>

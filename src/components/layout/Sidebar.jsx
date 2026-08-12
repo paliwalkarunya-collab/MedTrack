@@ -20,8 +20,11 @@ import {
   AlertTriangle,
   Clock,
   CalendarDays,
+  UsersRound,
 } from 'lucide-react';
 import { useSidebar } from '../../hooks/useSidebarContext';
+import { useAuth } from '../../hooks/useAuth';
+import { pathPermissions } from '../../utils/permissions';
 
 const inventorySubItems = [
   { name: 'All Medicines', path: '/inventory', icon: ListFilter },
@@ -41,10 +44,12 @@ const mainNavItems = [
   { name: 'Alerts', path: '/alerts', icon: Bell },
   { name: 'Expiry Management', path: '/expiry', icon: CalendarDays },
   { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Users', path: '/users', icon: UsersRound },
 ];
 
 export const Sidebar = () => {
   const { isCollapsed, toggleCollapse, isMobileOpen, closeMobileMenu } = useSidebar();
+  const { hasPermission } = useAuth();
   const location = useLocation();
 
   const isInventoryActive = location.pathname.startsWith('/inventory');
@@ -85,7 +90,7 @@ export const Sidebar = () => {
 
       {/* Navigation Items */}
       <div className="flex-1 py-6 px-3.5 space-y-1.5 overflow-y-auto">
-        {mainNavItems.map((item) => {
+        {mainNavItems.filter((item) => hasPermission(pathPermissions[item.path])).map((item) => {
           const Icon = item.icon;
           const isActive = item.hasSubmenu
             ? isInventoryActive
