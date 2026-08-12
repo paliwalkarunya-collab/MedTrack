@@ -11,6 +11,7 @@ const pageTitles = {
   '/analytics': 'Analytics & Insights',
   '/reports': 'Reports & Exports',
   '/alerts': 'Alerts & Expirations',
+  '/expiry': 'Expiry Management',
   '/settings': 'System Settings',
 };
 

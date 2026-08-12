@@ -19,6 +19,7 @@ import {
   Grid,
   AlertTriangle,
   Clock,
+  CalendarDays,
 } from 'lucide-react';
 import { useSidebar } from '../../hooks/useSidebarContext';
 
@@ -38,6 +39,7 @@ const mainNavItems = [
   { name: 'Analytics', path: '/analytics', icon: BarChart3 },
   { name: 'Reports', path: '/reports', icon: FileText },
   { name: 'Alerts', path: '/alerts', icon: Bell },
+  { name: 'Expiry Management', path: '/expiry', icon: CalendarDays },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
