@@ -7,9 +7,11 @@ import { SupplierProvider } from '../hooks/SupplierProvider';
 import { PurchaseProvider } from '../hooks/PurchaseProvider';
 import { BillingProvider } from '../hooks/BillingProvider';
 import { ReturnProvider } from '../hooks/ReturnProvider';
+import { SettingsProvider } from '../hooks/SettingsProvider';
 
 export const AppLayout = () => {
   return (
+    <SettingsProvider>
     <SupplierProvider>
     <BillingProvider>
     <PurchaseProvider>
@@ -39,5 +41,6 @@ export const AppLayout = () => {
     </PurchaseProvider>
     </BillingProvider>
     </SupplierProvider>
+    </SettingsProvider>
   );
 };

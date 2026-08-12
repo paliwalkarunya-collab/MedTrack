@@ -32,6 +32,7 @@ export const SidebarProvider = ({ children }) => {
         toggleMobileMenu,
         closeMobileMenu,
         isDarkMode,
+        setDarkMode: setIsDarkMode,
         toggleDarkMode,
       }}
     >

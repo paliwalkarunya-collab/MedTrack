@@ -20,8 +20,12 @@ import {
   Clock,
   RotateCcw,
   History,
+  CalendarDays,
+  UsersRound,
 } from 'lucide-react';
 import { useSidebar } from '../../hooks/useSidebarContext';
+import { useAuth } from '../../hooks/useAuth';
+import { pathPermissions } from '../../utils/permissions';
 
 const inventorySubItems = [
   { name: 'All Medicines', path: '/inventory', icon: ListFilter },
@@ -41,11 +45,14 @@ const mainNavItems = [
   { name: 'Suppliers', path: '/suppliers', icon: Building2 },
   { name: 'Reports', path: '/reports', icon: FileText },
   { name: 'Alerts', path: '/alerts', icon: Bell },
+  { name: 'Expiry Management', path: '/expiry', icon: CalendarDays },
   { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Users', path: '/users', icon: UsersRound },
 ];
 
 export const Sidebar = () => {
   const { isCollapsed, toggleCollapse, isMobileOpen, closeMobileMenu } = useSidebar();
+  const { hasPermission } = useAuth();
   const location = useLocation();
 
   const isInventoryActive = location.pathname.startsWith('/inventory');
@@ -73,7 +80,6 @@ export const Sidebar = () => {
             </div>
           )}
         </div>
-
         {/* Mobile Close Button */}
         <button
           onClick={closeMobileMenu}
@@ -86,7 +92,7 @@ export const Sidebar = () => {
 
       {/* Navigation Items */}
       <div className="flex-1 py-6 px-3.5 space-y-1.5 overflow-y-auto">
-        {mainNavItems.map((item) => {
+        {mainNavItems.filter((item) => hasPermission(pathPermissions[item.path])).map((item) => {
           const Icon = item.icon;
           const isActive = item.hasSubmenu
             ? isInventoryActive
@@ -115,7 +121,6 @@ export const Sidebar = () => {
                     <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
                     {!isCollapsed && <span className="truncate">{item.name}</span>}
                   </div>
-
                   {!isCollapsed && (
                     <ChevronDown
                       className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
@@ -123,7 +128,6 @@ export const Sidebar = () => {
                       }`}
                     />
                   )}
-
                   {/* Tooltip for collapsed mode */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-lg z-50">
@@ -140,7 +144,6 @@ export const Sidebar = () => {
                       const isSubActive =
                         location.pathname + location.search === subItem.path ||
                         (subItem.path === '/inventory' && location.pathname === '/inventory' && !location.search);
-
                       return (
                         <NavLink
                           key={subItem.name}
@@ -175,9 +178,7 @@ export const Sidebar = () => {
               } ${isCollapsed ? 'justify-center px-2' : ''}`}
             >
               <Icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
-
               {!isCollapsed && <span className="truncate">{item.name}</span>}
-
               {/* Tooltip for collapsed desktop view */}
               {isCollapsed && (
                 <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-lg z-50">
