@@ -66,17 +66,17 @@ export const Sidebar = () => {
   }, [isInventoryActive]);
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900/95 border-r border-slate-200/70 dark:border-slate-800/70 transition-all duration-300 relative select-none shadow-xs">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900/95 border-r border-[#d9e9ec] dark:border-slate-800/70 transition-all duration-300 relative select-none shadow-[3px_0_18px_rgba(17,58,79,0.025)]">
       {/* Brand Header (72px height matching main header) */}
-      <div className={`flex items-center h-[72px] px-5 border-b border-slate-200/70 dark:border-slate-800/70 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+      <div className={`flex items-center h-[76px] px-5 border-b border-[#d9e9ec] dark:border-slate-800/70 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-blue-500/20">
+          <div className="w-10 h-10 rounded-xl bg-[#079bb0] flex items-center justify-center text-white shrink-0 shadow-md shadow-[#079bb0]/20">
             <Activity className="w-5.5 h-5.5" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col whitespace-nowrap">
-              <span className="font-bold text-slate-900 dark:text-white text-lg tracking-tight leading-none">MedTrack</span>
-              <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold tracking-wide uppercase leading-tight mt-1">Healthcare Platform</span>
+              <span className="font-bold text-[#11364f] dark:text-white text-lg tracking-tight leading-none">MedTrack</span>
+              <span className="text-[10px] text-[#079bb0] dark:text-blue-400 font-bold tracking-[0.14em] uppercase leading-tight mt-1">Healthcare Platform</span>
             </div>
           )}
         </div>
