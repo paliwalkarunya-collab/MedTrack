@@ -18,7 +18,7 @@ export const AppLayout = () => {
     <InventoryProvider>
     <ReturnProvider>
     <SidebarProvider>
-      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased selection:bg-blue-500 selection:text-white">
+      <div className="flex h-screen bg-[#f6fbfc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased">
         {/* Responsive Collapsible Sidebar */}
         <Sidebar />
 
@@ -28,7 +28,7 @@ export const AppLayout = () => {
           <Header />
 
           {/* Page Content Outlet */}
-          <main className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6">
+          <main className="flex-1 overflow-y-auto p-5 lg:p-7 space-y-6">
             <div className="max-w-7xl mx-auto w-full">
               <Outlet />
             </div>
