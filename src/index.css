@@ -1,17 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Calistoga:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 
 @layer base {
   :root {
-    --color-primary: #15803D;
+    --color-primary: #079bb0;
     --color-on-primary: #FFFFFF;
-    --color-secondary: #22C55E;
-    --color-accent: #0369A1;
-    --color-background: #F0FDF4;
-    --color-foreground: #14532D;
-    --color-muted: #E8F0F1;
-    --color-border: #BBF7D0;
+    --color-secondary: #17b4c5;
+    --color-accent: #0e3859;
+    --color-background: #f6fbfc;
+    --color-foreground: #12334c;
+    --color-muted: #eaf5f6;
+    --color-border: #d7e8eb;
     --color-destructive: #DC2626;
     --color-ring: #15803D;
 
@@ -54,7 +54,7 @@
 }
 
 @theme {
-  --font-heading: "Calistoga", "Inter", system-ui, sans-serif;
+  --font-heading: "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
@@ -91,6 +91,17 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Clinic-inspired presentation layer: kept separate from the application logic. */
+body {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(29, 180, 197, 0.10), transparent 27rem),
+    var(--color-background);
+}
+
+button, input, select, textarea { font-family: inherit; }
+
+::selection { background: #079bb0; color: #fff; }
 
 @layer utilities {
   .text-heading {
