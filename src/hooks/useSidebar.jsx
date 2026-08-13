@@ -4,17 +4,27 @@ import { SidebarContext } from './sidebarContext';
 export const SidebarProvider = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('medtrack-theme') === 'dark';
-  });
+
+  // Always start in light mode. We intentionally do NOT read a saved
+  // preference on load so the app never opens in dark mode just because
+  // some other project (or a previous visit) left a value behind in this
+  // browser's storage for localhost.
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    sessionStorage.removeItem('medtrack-theme');
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('medtrack-theme', 'dark');
+      // sessionStorage clears itself when the tab/browser is closed, so a
+      // toggle only persists for the current session instead of forever.
+      sessionStorage.setItem('medtrack-theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('medtrack-theme', 'light');
+      sessionStorage.removeItem('medtrack-theme');
     }
   }, [isDarkMode]);
 
