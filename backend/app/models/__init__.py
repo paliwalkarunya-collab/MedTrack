@@ -7,8 +7,9 @@ from app.models.inventory_batch import InventoryBatch
 from app.models.supplier import Supplier
 from app.models.purchase import Purchase
 from app.models.purchase_item import PurchaseItem
+from app.models.stock_allocation import StockAllocation
 
 __all__ = [
     "Base", "Pharmacy", "PharmacyMembership", "MedicineCategory", "Medicine", 
-    "InventoryBatch", "Supplier", "Purchase", "PurchaseItem"
+    "InventoryBatch", "Supplier", "Purchase", "PurchaseItem", "StockAllocation"
 ]
