@@ -30,3 +30,5 @@ __pycache__/
 backend/.env
 backend/.venv/
 .pytest_cache/
+
+backend/*.db
