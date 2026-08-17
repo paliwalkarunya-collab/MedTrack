@@ -6,11 +6,11 @@ import uuid
 from app.db.session import get_db
 from app.schemas.supplier import SupplierCreate, SupplierUpdate, SupplierResponse
 from app.services.supplier_service import SupplierService
-from app.tenancy.dependencies import require_tenant_from_header
+from app.api.deps import get_current_pharmacy, require_staff
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_staff), Depends(get_current_pharmacy)])
 
-def get_supplier_service(db: Session = Depends(get_db), _=Depends(require_tenant_from_header)) -> SupplierService:
+def get_supplier_service(db: Session = Depends(get_db)) -> SupplierService:
     return SupplierService(db)
 
 @router.post("/", response_model=SupplierResponse, status_code=status.HTTP_201_CREATED)

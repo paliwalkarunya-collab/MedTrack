@@ -4,8 +4,9 @@ from app.db.session import get_db
 from app.tenancy.dependencies import require_tenant_from_header
 from app.schemas.fifo import FIFOAllocationRequest, FIFOAllocationResponse
 from app.services.fifo_service import FIFOService
+from app.api.deps import get_current_pharmacy, require_staff
 
-router = APIRouter(dependencies=[Depends(require_tenant_from_header)])
+router = APIRouter(dependencies=[Depends(require_staff), Depends(get_current_pharmacy)])
 
 @router.post("/allocate", response_model=FIFOAllocationResponse)
 def allocate_stock(

@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
 from app.services.category_service import CategoryService
-from app.tenancy.dependencies import require_tenant_from_header
+from app.api.deps import get_current_pharmacy, require_staff
 
-router = APIRouter(tags=["Categories"], dependencies=[Depends(require_tenant_from_header)])
+router = APIRouter(tags=["Categories"], dependencies=[Depends(require_staff), Depends(get_current_pharmacy)])
 
 @router.post("/", response_model=CategoryResponse, status_code=201)
 def create_category(category_in: CategoryCreate, db: Session = Depends(get_db)):

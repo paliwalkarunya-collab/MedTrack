@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.medicine import MedicineCreate, MedicineUpdate, MedicineResponse
 from app.services.medicine_service import MedicineService
-from app.tenancy.dependencies import require_tenant_from_header
+from app.api.deps import get_current_pharmacy, require_staff
 
-router = APIRouter(tags=["Medicines"], dependencies=[Depends(require_tenant_from_header)])
+router = APIRouter(tags=["Medicines"], dependencies=[Depends(require_staff), Depends(get_current_pharmacy)])
 
 @router.post("/", response_model=MedicineResponse, status_code=201)
 def create_medicine(medicine_in: MedicineCreate, db: Session = Depends(get_db)):
