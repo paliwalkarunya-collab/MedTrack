@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.inventory_batch import InventoryBatchCreate, InventoryBatchUpdate, InventoryBatchResponse
 from app.services.inventory_batch_service import InventoryBatchService
-from app.tenancy.dependencies import require_tenant_from_header
+from app.api.deps import get_current_pharmacy, require_staff
 
-router = APIRouter(tags=["Inventory Batches"], dependencies=[Depends(require_tenant_from_header)])
+router = APIRouter(tags=["Inventory Batches"], dependencies=[Depends(require_staff), Depends(get_current_pharmacy)])
 
 @router.post("/", response_model=InventoryBatchResponse, status_code=201)
 def create_batch(batch_in: InventoryBatchCreate, db: Session = Depends(get_db)):

@@ -7,14 +7,63 @@ from app.models.supplier import Supplier
 from app.models.inventory_batch import InventoryBatch
 from app.models.purchase import Purchase
 from app.models.purchase_item import PurchaseItem
+from app.models.membership import PharmacyMembership
+from app.models.user import User, UserRole
+from app.core.security import get_password_hash
 
-def test_purchase_crud_and_receiving(client, db_session):
+
+@pytest.fixture
+def auth_headers(client, db_session):
+    """Create a test user with pharmacy memberships and return auth headers."""
     pA = Pharmacy(name="Pharm A")
     pB = Pharmacy(name="Pharm B")
     db_session.add_all([pA, pB])
-    db_session.flush()
+    db_session.commit()
+    
+    user = User(
+        email="test@test.com",
+        hashed_password=get_password_hash("password123"),
+        full_name="Test User",
+        role=UserRole.STAFF,
+        is_active='true'
+    )
+    db_session.add(user)
+    db_session.commit()
+    
+    memberships = [
+        PharmacyMembership(user_id=user.id, pharmacy_id=pA.id, status='active'),
+        PharmacyMembership(user_id=user.id, pharmacy_id=pB.id, status='active'),
+    ]
+    db_session.add_all(memberships)
+    db_session.commit()
+    
+    login_resp = client.post(
+        "/api/v1/auth/login",
+        json={"email": "test@test.com", "password": "password123"}
+    )
+    token = login_resp.json()["access_token"]
+    
+    return {
+        "token": token,
+        "pA": pA,
+        "pB": pB,
+        "user": user
+    }
+
+
+def get_headers(token, pharmacy_id):
+    return {"Authorization": f"Bearer {token}", "X-Pharmacy-ID": str(pharmacy_id)}
+
+
+def test_purchase_crud_and_receiving(client, db_session, auth_headers):
+    token = auth_headers["token"]
+    pA = auth_headers["pA"]
+    pB = auth_headers["pB"]
     pA_id = pA.id
     pB_id = pB.id
+    
+    headers_A = get_headers(token, pA_id)
+    headers_B = get_headers(token, pB_id)
     
     # Create medicines
     medA1 = Medicine(pharmacy_id=pA_id, name="Med A1")
@@ -38,8 +87,6 @@ def test_purchase_crud_and_receiving(client, db_session):
     supB1_id = supB1.id
     supInactive_id = supInactive.id
     
-    headers_A = {"X-Pharmacy-ID": str(pA_id)}
-    headers_B = {"X-Pharmacy-ID": str(pB_id)}
     db_session.commit()
     
     # 1. Test inactive supplier prevention

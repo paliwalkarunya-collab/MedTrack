@@ -6,11 +6,11 @@ import uuid
 from app.db.session import get_db
 from app.schemas.purchase import PurchaseCreate, PurchaseUpdate, PurchaseResponse
 from app.services.purchase_service import PurchaseService
-from app.tenancy.dependencies import require_tenant_from_header
+from app.api.deps import get_current_pharmacy, require_staff
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_staff), Depends(get_current_pharmacy)])
 
-def get_purchase_service(db: Session = Depends(get_db), _=Depends(require_tenant_from_header)) -> PurchaseService:
+def get_purchase_service(db: Session = Depends(get_db)) -> PurchaseService:
     return PurchaseService(db)
 
 @router.post("/", response_model=PurchaseResponse, status_code=status.HTTP_201_CREATED)
