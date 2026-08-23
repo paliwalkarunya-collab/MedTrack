@@ -6,6 +6,8 @@ from app.schemas.auth import (
     PharmacySelectRequest, PharmacySelectResponse
 )
 from app.schemas.settings import SettingsUpdate, SettingsResponse
+from app.schemas.expiry import ExpiryBatchResponse, ExpiryListResponse, ExpirySummaryResponse
+from app.schemas.alerts import AlertResponse, AlertSummaryResponse, LowStockAlertResponse
 
 __all__ = [
     "CategoryCreate", "CategoryUpdate", "CategoryResponse",
@@ -13,5 +15,6 @@ __all__ = [
     "InventoryBatchCreate", "InventoryBatchUpdate", "InventoryBatchResponse",
     "UserCreate", "UserLogin", "Token", "TokenData", "UserResponse",
     "PharmacySelectRequest", "PharmacySelectResponse",
-    "SettingsUpdate", "SettingsResponse"
+    "SettingsUpdate", "SettingsResponse", "ExpiryBatchResponse", "ExpiryListResponse",
+    "ExpirySummaryResponse", "AlertResponse", "AlertSummaryResponse", "LowStockAlertResponse"
 ]
