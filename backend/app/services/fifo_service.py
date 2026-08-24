@@ -11,7 +11,7 @@ from app.tenancy.tenant_context import get_current_pharmacy_id
 
 class FIFOService:
     @staticmethod
-    def allocate_stock(db: Session, medicine_id: uuid.UUID, quantity: int):
+    def allocate_stock(db: Session, medicine_id: uuid.UUID, quantity: int, invoice_id: uuid.UUID | None = None):
         pharmacy_id = get_current_pharmacy_id()
         if not pharmacy_id:
             from app.tenancy.tenant_context import TenantContextRequired
@@ -84,6 +84,7 @@ class FIFOService:
                 pharmacy_id=pharmacy_id,
                 medicine_id=medicine_id,
                 inventory_batch_id=batch.id,
+                invoice_id=invoice_id,
                 quantity=consume_qty
             )
             db.add(allocation)

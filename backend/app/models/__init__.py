@@ -10,8 +10,12 @@ from app.models.purchase import Purchase
 from app.models.purchase_item import PurchaseItem
 from app.models.stock_allocation import StockAllocation
 from app.models.pharmacy_settings import PharmacySettings
+from app.models.customer import Customer
+from app.models.invoice import Invoice
+from app.models.invoice_item import InvoiceItem
 
 __all__ = [
     "Base", "Pharmacy", "PharmacyMembership", "User", "UserRole", "MedicineCategory", "Medicine", 
-    "InventoryBatch", "Supplier", "Purchase", "PurchaseItem", "StockAllocation", "PharmacySettings"
+    "InventoryBatch", "Supplier", "Purchase", "PurchaseItem", "StockAllocation",
+    "PharmacySettings", "Customer", "Invoice", "InvoiceItem"
 ]
