@@ -8,6 +8,12 @@ from app.schemas.auth import (
 from app.schemas.settings import SettingsUpdate, SettingsResponse
 from app.schemas.expiry import ExpiryBatchResponse, ExpiryListResponse, ExpirySummaryResponse
 from app.schemas.alerts import AlertResponse, AlertSummaryResponse, LowStockAlertResponse
+from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceResponse, InvoiceItemCreate, InvoiceItemResponse
+from app.schemas.customer import CustomerCreate, CustomerResponse
+from app.schemas.return_schema import (
+    ReturnCreate, ReturnItemCreate, ReturnResponse, ReturnItemResponse,
+    ReturnItemDetail, ReturnAllocationResponse, ReturnCompleteResponse
+)
 
 __all__ = [
     "CategoryCreate", "CategoryUpdate", "CategoryResponse",
@@ -16,5 +22,9 @@ __all__ = [
     "UserCreate", "UserLogin", "Token", "TokenData", "UserResponse",
     "PharmacySelectRequest", "PharmacySelectResponse",
     "SettingsUpdate", "SettingsResponse", "ExpiryBatchResponse", "ExpiryListResponse",
-    "ExpirySummaryResponse", "AlertResponse", "AlertSummaryResponse", "LowStockAlertResponse"
+    "ExpirySummaryResponse", "AlertResponse", "AlertSummaryResponse", "LowStockAlertResponse",
+    "InvoiceCreate", "InvoiceUpdate", "InvoiceResponse", "InvoiceItemCreate", "InvoiceItemResponse",
+    "CustomerCreate", "CustomerResponse",
+    "ReturnCreate", "ReturnItemCreate", "ReturnResponse", "ReturnItemResponse",
+    "ReturnItemDetail", "ReturnAllocationResponse", "ReturnCompleteResponse"
 ]
