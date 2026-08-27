@@ -1,85 +1,140 @@
-import { useState } from 'react';
-import { medicines } from '../utils/inventoryData';
-import { receiveStockIntoProduct } from '../utils/purchaseBatchUtils';
-import { deductFifoBatches, ensureProductBatches } from '../utils/fifoBatchUtils';
-import { getPackaging } from '../utils/productModel';
+import { useState, useEffect, useCallback } from 'react';
+import { medicinesApi, batchesApi, categoriesApi } from '../api/client';
 import { InventoryContext } from './inventoryContext';
 
+const mapMedicine = (med) => ({
+  id: med.id,
+  name: med.name,
+  genericName: med.generic_name,
+  brandName: med.brand_name,
+  manufacturer: med.manufacturer,
+  dosageForm: med.dosage_form,
+  strength: med.strength,
+  unit: med.unit,
+  description: med.description,
+  barcode: med.barcode,
+  hsnCode: med.hsn_code,
+  gstPercentage: med.gst_percentage,
+  isActive: med.is_active,
+  categoryId: med.category_id,
+  packaging: {
+    unitsPerPack: med.units_per_pack || 1,
+    packSize: med.pack_size || '1',
+  },
+  batches: med.inventory_batches?.map(mapBatch) || [],
+});
+
+const mapBatch = (batch) => ({
+  id: batch.id,
+  batchNumber: batch.batch_number,
+  expiryDate: batch.expiry_date,
+  quantity: batch.quantity,
+  quantityRemaining: batch.quantity_remaining ?? batch.quantity,
+  purchasePrice: batch.purchase_price,
+  sellingPrice: batch.selling_price,
+  mrp: batch.mrp,
+  isActive: batch.is_active,
+});
+
 export const InventoryProvider = ({ children }) => {
-  const [inventory, setInventory] = useState(() => medicines.map(ensureProductBatches));
-  const [lastBillItems, setLastBillItems] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const addMedicine = (medicine) => setInventory((currentInventory) => [...currentInventory, medicine]);
-  const updateMedicine = (medicine) => setInventory((currentInventory) => currentInventory.map((item) => item.id === medicine.id ? medicine : item));
-  const receivePurchase = (productId, batch) => setInventory((items) => items.map((item) => item.id === productId ? receiveStockIntoProduct(item, batch) : item));
-  const deductStockForBill = (cartItems) => {
-    const billItems = cartItems.map((item) => {
-      const medicine = inventory.find((product) => product.id === item.medicine.id);
-      const requestedUnits = item.packs * medicine.packaging.unitsPerPack + item.looseUnits;
-      return { ...item, batchUsed: deductFifoBatches(medicine, requestedUnits).allocation.allocations };
-    });
-    const billItemsByProduct = new Map(billItems.map((item) => [item.medicine.id, item]));
-    setInventory((items) => items.map((product) => {
-      const billItem = billItemsByProduct.get(product.id);
-      return billItem ? deductFifoBatches(product, billItem.packs * product.packaging.unitsPerPack + billItem.looseUnits).product : product;
-    }));
-    setLastBillItems(billItems);
-    return billItems;
-  };
-
-  const restoreStockForReturn = (returnItems) => {
-    // returnItems: [{ medicineId, batchId, returnedQuantity }]
-    // Returns an array of batchIds that could not be matched in inventory.
-    const byProduct = new Map();
-    returnItems.forEach((ri) => {
-      if (!byProduct.has(ri.medicineId)) byProduct.set(ri.medicineId, []);
-      byProduct.get(ri.medicineId).push(ri);
-    });
-
-    const missingBatchIds = [];
-
-    // Verify all batches exist before mutating anything
-    byProduct.forEach((restoreList, productId) => {
-      const product = inventory.find((p) => p.id === productId);
-      restoreList.forEach((ri) => {
-        if (!product || !product.batches?.find((b) => b.id === ri.batchId)) {
-          missingBatchIds.push(ri.batchId);
-        }
-      });
-    });
-
-    if (missingBatchIds.length > 0) {
-      console.error('[restoreStockForReturn] Cannot restore — batches not found:', missingBatchIds);
-      return { ok: false, missingBatchIds };
+  const fetchInventory = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [medicines, cats] = await Promise.all([
+        medicinesApi.list(),
+        categoriesApi.list(),
+      ]);
+      setInventory(medicines.map(mapMedicine));
+      setCategories(cats);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    setInventory((items) => items.map((product) => {
-      const restoreList = byProduct.get(product.id);
-      if (!restoreList) return product;
+  useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory]);
 
-      const restoreMap = new Map(restoreList.map((ri) => [ri.batchId, ri.returnedQuantity]));
-      const batches = product.batches.map((batch) => {
-        const qty = restoreMap.get(batch.id);
-        if (!qty) return batch;
-        return { ...batch, quantityRemaining: batch.quantityRemaining + qty };
-      });
-
-      const remainingUnits = batches.reduce((total, b) => total + Math.max(0, b.quantityRemaining), 0);
-      const { unitsPerPack } = getPackaging(product);
-
-      return {
-        ...product,
-        batches,
-        stock: {
-          ...product.stock,
-          currentPacks: Math.floor(remainingUnits / unitsPerPack),
-          looseUnits: remainingUnits % unitsPerPack,
-        },
-      };
-    }));
-
-    return { ok: true, missingBatchIds: [] };
+  const addMedicine = async (medicineData) => {
+    const created = await medicinesApi.create(medicineData);
+    setInventory(prev => [...prev, mapMedicine(created)]);
+    return mapMedicine(created);
   };
 
-  return <InventoryContext.Provider value={{ inventory, lastBillItems, addMedicine, updateMedicine, receivePurchase, deductStockForBill, restoreStockForReturn }}>{children}</InventoryContext.Provider>;
+  const updateMedicine = async (id, medicineData) => {
+    const updated = await medicinesApi.update(id, medicineData);
+    setInventory(prev => prev.map(item => item.id === id ? mapMedicine(updated) : item));
+    return mapMedicine(updated);
+  };
+
+  const deleteMedicine = async (id) => {
+    await medicinesApi.delete(id);
+    setInventory(prev => prev.filter(item => item.id !== id));
+  };
+
+  const addBatch = async (medicineId, batchData) => {
+    const created = await batchesApi.create({ ...batchData, medicine_id: medicineId });
+    setInventory(prev => prev.map(item => 
+      item.id === medicineId 
+        ? { ...item, batches: [...item.batches, mapBatch(created)] }
+        : item
+    ));
+    return mapBatch(created);
+  };
+
+  const updateBatch = async (medicineId, batchId, batchData) => {
+    const updated = await batchesApi.update(batchId, batchData);
+    setInventory(prev => prev.map(item => 
+      item.id === medicineId 
+        ? { ...item, batches: item.batches.map(b => b.id === batchId ? mapBatch(updated) : b) }
+        : item
+    ));
+    return mapBatch(updated);
+  };
+
+  const deleteBatch = async (medicineId, batchId) => {
+    await batchesApi.delete(batchId);
+    setInventory(prev => prev.map(item => 
+      item.id === medicineId 
+        ? { ...item, batches: item.batches.filter(b => b.id !== batchId) }
+        : item
+    ));
+  };
+
+  const receivePurchase = async (medicineId, batch) => {
+    // This would typically be handled via purchase receiving flow
+    // For manual receive, add/update batch
+    const existing = inventory.find(m => m.id === medicineId)?.batches?.find(b => b.batchNumber === batch.batchNumber);
+    if (existing) {
+      return updateBatch(medicineId, existing.id, { quantityRemaining: existing.quantityRemaining + batch.quantity });
+    } else {
+      return addBatch(medicineId, batch);
+    }
+  };
+
+  return (
+    <InventoryContext.Provider value={{
+      inventory,
+      categories,
+      isLoading,
+      error,
+      addMedicine,
+      updateMedicine,
+      deleteMedicine,
+      addBatch,
+      updateBatch,
+      deleteBatch,
+      receivePurchase,
+      refreshInventory: fetchInventory,
+    }}>
+      {children}
+    </InventoryContext.Provider>
+  );
 };

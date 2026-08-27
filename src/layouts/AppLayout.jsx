@@ -2,21 +2,10 @@ import { Outlet } from 'react-router-dom';
 import { SidebarProvider } from '../hooks/useSidebar';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
-import { InventoryProvider } from '../hooks/InventoryProvider';
-import { SupplierProvider } from '../hooks/SupplierProvider';
-import { PurchaseProvider } from '../hooks/PurchaseProvider';
-import { BillingProvider } from '../hooks/BillingProvider';
-import { ReturnProvider } from '../hooks/ReturnProvider';
-import { SettingsProvider } from '../hooks/SettingsProvider';
+import { PharmacySelector } from '../components/PharmacySelector';
 
 export const AppLayout = () => {
   return (
-    <SettingsProvider>
-    <SupplierProvider>
-    <BillingProvider>
-    <PurchaseProvider>
-    <InventoryProvider>
-    <ReturnProvider>
     <SidebarProvider>
       <div className="flex h-screen bg-[#f6fbfc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased">
         {/* Responsive Collapsible Sidebar */}
@@ -27,6 +16,11 @@ export const AppLayout = () => {
           {/* Sticky 72px Header */}
           <Header />
 
+          {/* Pharmacy Selector */}
+          <div className="px-5 lg:px-7 pb-2">
+            <PharmacySelector />
+          </div>
+
           {/* Page Content Outlet */}
           <main className="flex-1 overflow-y-auto p-5 lg:p-7 space-y-6">
             <div className="max-w-7xl mx-auto w-full">
@@ -36,11 +30,7 @@ export const AppLayout = () => {
         </div>
       </div>
     </SidebarProvider>
-    </ReturnProvider>
-    </InventoryProvider>
-    </PurchaseProvider>
-    </BillingProvider>
-    </SupplierProvider>
-    </SettingsProvider>
   );
 };
+
+export default AppLayout;
