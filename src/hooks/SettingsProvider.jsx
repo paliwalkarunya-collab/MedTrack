@@ -1,16 +1,67 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { settingsApi } from '../api/client';
+import { defaultSettings } from '../utils/settingsStorage';
 import { SettingsContext } from './settingsContext';
-import { defaultSettings, loadSettings, saveStoredSettings, sanitizeSettings } from '../utils/settingsStorage';
 
 export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState(loadSettings);
+  const [settings, setSettings] = useState(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState('');
-  const [lastSavedAt, setLastSavedAt] = useState(() => { try { return JSON.parse(localStorage.getItem('medtrack-settings-v1') || '{}').savedAt || null; } catch { return null; } });
-  const saveSettings = (nextSettings) => {
-    const clean = sanitizeSettings(nextSettings);
-    if (!saveStoredSettings(clean)) { setSaveError('Settings could not be saved because browser storage is unavailable.'); return false; }
-    setSettings(clean); setLastSavedAt(new Date().toISOString()); setSaveError(''); return true;
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+
+  const fetchSettings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await settingsApi.get();
+      setSettings(data);
+      setLastSavedAt(data.updated_at || data.created_at || null);
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+      // Keep default settings on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  const saveSettings = async (nextSettings) => {
+    setSaveError('');
+    try {
+      const updated = await settingsApi.update(nextSettings);
+      setSettings(updated);
+      setLastSavedAt(updated.updated_at || new Date().toISOString());
+      return true;
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save settings');
+      return false;
+    }
   };
-  const resetSettings = () => saveSettings(defaultSettings);
-  return <SettingsContext.Provider value={{ settings, saveSettings, resetSettings, lastSavedAt, saveError }}>{children}</SettingsContext.Provider>;
+
+  const resetSettings = async () => {
+    try {
+      const updated = await settingsApi.update(defaultSettings);
+      setSettings(updated);
+      setLastSavedAt(updated.updated_at || new Date().toISOString());
+      return true;
+    } catch (err) {
+      setSaveError(err.message || 'Failed to reset settings');
+      return false;
+    }
+  };
+
+  return (
+    <SettingsContext.Provider value={{
+      settings,
+      isLoading,
+      saveSettings,
+      resetSettings,
+      lastSavedAt,
+      saveError,
+    }}>
+      {children}
+    </SettingsContext.Provider>
+  );
 };

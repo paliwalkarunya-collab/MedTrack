@@ -14,6 +14,15 @@ from app.schemas.return_schema import (
     ReturnCreate, ReturnItemCreate, ReturnResponse, ReturnItemResponse,
     ReturnItemDetail, ReturnAllocationResponse, ReturnCompleteResponse
 )
+from app.schemas.reports import (
+    SalesReportItem, SalesSummary,
+    PurchaseReportItem, PurchaseSummary,
+    COGSReportItem, COGSSummary,
+    ProfitReportItem, ProfitSummary,
+    DashboardSummary,
+    TopMedicine, TopSupplier,
+    ReportFilters,
+)
 
 __all__ = [
     "CategoryCreate", "CategoryUpdate", "CategoryResponse",
@@ -26,5 +35,12 @@ __all__ = [
     "InvoiceCreate", "InvoiceUpdate", "InvoiceResponse", "InvoiceItemCreate", "InvoiceItemResponse",
     "CustomerCreate", "CustomerResponse",
     "ReturnCreate", "ReturnItemCreate", "ReturnResponse", "ReturnItemResponse",
-    "ReturnItemDetail", "ReturnAllocationResponse", "ReturnCompleteResponse"
+    "ReturnItemDetail", "ReturnAllocationResponse", "ReturnCompleteResponse",
+    "SalesReportItem", "SalesSummary",
+    "PurchaseReportItem", "PurchaseSummary",
+    "COGSReportItem", "COGSSummary",
+    "ProfitReportItem", "ProfitSummary",
+    "DashboardSummary",
+    "TopMedicine", "TopSupplier",
+    "ReportFilters",
 ]
