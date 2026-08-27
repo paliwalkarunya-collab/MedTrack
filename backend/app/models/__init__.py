@@ -13,9 +13,13 @@ from app.models.pharmacy_settings import PharmacySettings
 from app.models.customer import Customer
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
+from app.models.return_model import Return
+from app.models.return_item import ReturnItem
+from app.models.return_allocation import ReturnAllocation
 
 __all__ = [
-    "Base", "Pharmacy", "PharmacyMembership", "User", "UserRole", "MedicineCategory", "Medicine", 
+    "Base", "Pharmacy", "PharmacyMembership", "User", "UserRole", "MedicineCategory", "Medicine",
     "InventoryBatch", "Supplier", "Purchase", "PurchaseItem", "StockAllocation",
-    "PharmacySettings", "Customer", "Invoice", "InvoiceItem"
+    "PharmacySettings", "Customer", "Invoice", "InvoiceItem",
+    "Return", "ReturnItem", "ReturnAllocation"
 ]
